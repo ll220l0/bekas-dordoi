@@ -36,59 +36,149 @@ type AuditRow = {
   orderId?: string | null;
 };
 
-function KpiCard({ label, value }: { label: string; value: string | number }) {
+type Point = {
+  x: number;
+  y: number;
+};
+
+type RevenuePoint = Point & {
+  date: string;
+  orders: number;
+  delivered: number;
+  canceled: number;
+  revenueKgs: number;
+  avgCheckKgs: number;
+  barY: number;
+  barHeight: number;
+};
+
+function buildSmoothPath(points: Point[]) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = i > 0 ? points[i - 1] : points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = i + 2 < points.length ? points[i + 2] : p2;
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+  }
+
+  return path;
+}
+
+function TinySparkline({ values, stroke, fill, baseline = 0 }: { values: number[]; stroke: string; fill: string; baseline?: number }) {
+  const width = 136;
+  const height = 46;
+  const padding = 4;
+
+  const normalizedValues = values.length > 0 ? values : [baseline, baseline, baseline];
+  const minV = Math.min(...normalizedValues, baseline);
+  const maxV = Math.max(...normalizedValues, baseline + 1);
+  const range = Math.max(1, maxV - minV);
+
+  const points = normalizedValues.map((value, idx) => {
+    const x = padding + ((width - padding * 2) * idx) / Math.max(1, normalizedValues.length - 1);
+    const y = padding + (height - padding * 2) * (1 - (value - minV) / range);
+    return { x, y };
+  });
+
+  const linePath = buildSmoothPath(points);
+  const first = points[0];
+  const last = points[points.length - 1];
+  const areaPath = `${linePath} L ${last.x} ${height - padding} L ${first.x} ${height - padding} Z`;
+
   return (
-    <Card className="p-4">
-      <div className="text-xs text-black/55">{label}</div>
-      <div className="mt-1 text-2xl font-extrabold">{value}</div>
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-11 w-full overflow-visible">
+      <defs>
+        <linearGradient id={`spark-fill-${stroke.replace(/[^a-z0-9]/gi, "")}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={fill} stopOpacity="0.36" />
+          <stop offset="100%" stopColor={fill} stopOpacity="0.04" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#spark-fill-${stroke.replace(/[^a-z0-9]/gi, "")})`} />
+      <path d={linePath} fill="none" stroke={stroke} strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  values,
+  stroke,
+  fill,
+  accent
+}: {
+  label: string;
+  value: string | number;
+  values: number[];
+  stroke: string;
+  fill: string;
+  accent: string;
+}) {
+  return (
+    <Card className="relative overflow-hidden border border-black/10 bg-white/85 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.42)] backdrop-blur">
+      <div className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full ${accent}`} />
+      <div className="relative">
+        <div className="text-[11px] uppercase tracking-[0.12em] text-black/45">{label}</div>
+        <div className="mt-1 text-2xl font-extrabold text-black/90">{value}</div>
+        <div className="mt-2">
+          <TinySparkline values={values} stroke={stroke} fill={fill} baseline={0} />
+        </div>
+      </div>
     </Card>
   );
 }
 
-function RevenueChart({ rows }: { rows: DailyRow[] }) {
+function RevenueTrendChart({ rows }: { rows: DailyRow[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     setActiveIndex(rows.length > 0 ? rows.length - 1 : 0);
   }, [rows.length]);
 
-  const maxRevenue = useMemo(() => Math.max(1, ...rows.map((row) => row.revenueKgs)), [rows]);
-  const maxOrders = useMemo(() => Math.max(1, ...rows.map((row) => row.orders)), [rows]);
-
   const chart = useMemo(() => {
-    const width = 760;
-    const height = 260;
-    const paddingX = 28;
-    const paddingTop = 14;
-    const paddingBottom = 34;
-    const innerW = width - paddingX * 2;
-    const innerH = height - paddingTop - paddingBottom;
+    const width = 840;
+    const height = 290;
+    const paddingX = 40;
+    const paddingTop = 20;
+    const paddingBottom = 46;
+    const innerWidth = width - paddingX * 2;
+    const innerHeight = height - paddingTop - paddingBottom;
 
+    const maxRevenue = Math.max(1, ...rows.map((row) => row.revenueKgs));
+    const maxOrders = Math.max(1, ...rows.map((row) => row.orders));
     const denominator = Math.max(1, rows.length - 1);
-    const points = rows.map((row, idx) => {
-      const x = paddingX + (innerW * idx) / denominator;
-      const y = paddingTop + innerH - (row.revenueKgs / maxRevenue) * innerH;
-      const barH = (row.orders / maxOrders) * innerH;
+
+    const points: RevenuePoint[] = rows.map((row, idx) => {
+      const x = paddingX + (innerWidth * idx) / denominator;
+      const y = paddingTop + innerHeight - (row.revenueKgs / maxRevenue) * innerHeight;
+      const barHeight = (row.orders / maxOrders) * innerHeight;
       return {
         ...row,
         x,
         y,
-        barY: paddingTop + innerH - barH,
-        barH
+        barY: paddingTop + innerHeight - barHeight,
+        barHeight
       };
     });
 
-    let linePath = "";
-    let areaPath = "";
-    if (points.length > 0) {
-      linePath = points
-        .map((point, idx) => `${idx === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
-        .join(" ");
-
-      const first = points[0];
-      const last = points[points.length - 1];
-      areaPath = `${linePath} L ${last.x.toFixed(1)} ${(paddingTop + innerH).toFixed(1)} L ${first.x.toFixed(1)} ${(paddingTop + innerH).toFixed(1)} Z`;
-    }
+    const linePath = buildSmoothPath(points);
+    const first = points[0];
+    const last = points[points.length - 1];
+    const areaPath =
+      points.length > 0
+        ? `${linePath} L ${last.x.toFixed(1)} ${(paddingTop + innerHeight).toFixed(1)} L ${first.x.toFixed(1)} ${(paddingTop + innerHeight).toFixed(1)} Z`
+        : "";
 
     return {
       width,
@@ -96,68 +186,165 @@ function RevenueChart({ rows }: { rows: DailyRow[] }) {
       paddingX,
       paddingTop,
       paddingBottom,
-      innerH,
+      innerWidth,
+      innerHeight,
       points,
       linePath,
       areaPath
     };
-  }, [rows, maxRevenue, maxOrders]);
+  }, [rows]);
 
-  const active = chart.points[Math.min(activeIndex, Math.max(0, chart.points.length - 1))] ?? null;
+  const activePoint = chart.points[Math.min(activeIndex, Math.max(0, chart.points.length - 1))] ?? null;
 
   return (
-    <Card className="overflow-hidden p-0">
-      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Выручка по дням</div>
+    <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
+      <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
+        <div className="text-sm font-semibold text-black/80">Тренд выручки</div>
+        <div className="text-xs text-black/50">Наведите на точку</div>
+      </div>
+
       <div className="px-4 pb-4 pt-3">
         {rows.length === 0 ? (
-          <div className="text-sm text-black/50">Нет данных за выбранный период.</div>
+          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">Нет данных за выбранный период.</div>
         ) : (
           <>
-            <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-56 w-full overflow-visible">
+            <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-64 w-full overflow-visible">
+              <defs>
+                <linearGradient id="reports-revenue-area" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0891b2" stopOpacity="0.33" />
+                  <stop offset="100%" stopColor="#0891b2" stopOpacity="0.04" />
+                </linearGradient>
+                <linearGradient id="reports-orders-bars" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.34" />
+                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.08" />
+                </linearGradient>
+              </defs>
+
               {[0, 1, 2, 3, 4].map((step) => {
-                const y = chart.paddingTop + (chart.innerH * step) / 4;
-                return <line key={step} x1={chart.paddingX} x2={chart.width - chart.paddingX} y1={y} y2={y} stroke="rgba(15,23,42,0.08)" strokeDasharray="4 6" />;
+                const y = chart.paddingTop + (chart.innerHeight * step) / 4;
+                return <line key={step} x1={chart.paddingX} x2={chart.width - chart.paddingX} y1={y} y2={y} stroke="rgba(15,23,42,0.08)" strokeDasharray="4 8" />;
               })}
 
               {chart.points.map((point, idx) => {
                 const next = chart.points[idx + 1];
-                const barWidth = next ? Math.max(8, next.x - point.x - 8) : 12;
+                const barWidth = next ? Math.max(8, next.x - point.x - 10) : 12;
                 return (
                   <rect
                     key={`bar-${point.date}`}
                     x={point.x - barWidth / 2}
                     y={point.barY}
                     width={barWidth}
-                    height={point.barH}
-                    rx={6}
-                    fill={idx === activeIndex ? "rgba(14,165,233,0.25)" : "rgba(15,23,42,0.08)"}
+                    height={point.barHeight}
+                    rx={7}
+                    fill={idx === activeIndex ? "rgba(14,165,233,0.48)" : "url(#reports-orders-bars)"}
                   />
                 );
               })}
 
-              {chart.areaPath ? <path d={chart.areaPath} fill="rgba(6,182,212,0.18)" /> : null}
-              {chart.linePath ? <path d={chart.linePath} fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" /> : null}
+              {chart.areaPath ? <path d={chart.areaPath} fill="url(#reports-revenue-area)" /> : null}
+              {chart.linePath ? <path d={chart.linePath} fill="none" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round" /> : null}
 
               {chart.points.map((point, idx) => (
                 <g key={`point-${point.date}`} onMouseEnter={() => setActiveIndex(idx)} onFocus={() => setActiveIndex(idx)}>
-                  <circle cx={point.x} cy={point.y} r={idx === activeIndex ? 6.5 : 4.5} fill={idx === activeIndex ? "#0284c7" : "#111827"} />
+                  <circle cx={point.x} cy={point.y} r={idx === activeIndex ? 7 : 5} fill={idx === activeIndex ? "#0ea5e9" : "#0f172a"} />
+                  {idx === activeIndex ? <circle cx={point.x} cy={point.y} r="11" fill="none" stroke="#0ea5e9" strokeOpacity="0.24" strokeWidth="6" /> : null}
                 </g>
               ))}
             </svg>
 
-            {active ? (
-              <div className="mt-2 rounded-2xl border border-black/10 bg-white/80 p-3 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold">{active.date}</div>
-                  <div className="font-bold">{formatKgs(active.revenueKgs)}</div>
+            {activePoint ? (
+              <div className="mt-3 rounded-2xl border border-black/10 bg-gradient-to-r from-cyan-50/80 via-white to-sky-50/80 p-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-semibold text-black/85">{activePoint.date}</div>
+                  <div className="text-base font-extrabold text-black/90">{formatKgs(activePoint.revenueKgs)}</div>
                 </div>
                 <div className="mt-1 text-xs text-black/60">
-                  Заказы: {active.orders} · Доставлено: {active.delivered} · Отменено: {active.canceled} · Средний чек: {formatKgs(active.avgCheckKgs)}
+                  Заказы: {activePoint.orders} · Доставлено: {activePoint.delivered} · Отменено: {activePoint.canceled} · Средний чек: {formatKgs(activePoint.avgCheckKgs)}
                 </div>
               </div>
             ) : null}
           </>
         )}
+      </div>
+    </Card>
+  );
+}
+
+function ConversionDonut({ summary }: { summary: ReportResp["summary"] | null | undefined }) {
+  const total = Math.max(0, summary?.totalOrders ?? 0);
+  const delivered = Math.max(0, summary?.totalDelivered ?? 0);
+  const canceled = Math.max(0, summary?.totalCanceled ?? 0);
+  const pending = Math.max(0, total - delivered - canceled);
+
+  const radius = 58;
+  const circumference = 2 * Math.PI * radius;
+  const values = [delivered, pending, canceled];
+  const colors = ["#10b981", "#0ea5e9", "#f43f5e"];
+
+  const segments = values.map((value, idx) => {
+    const portion = total > 0 ? value / total : 0;
+    const length = portion * circumference;
+    const previous = values.slice(0, idx).reduce((sum, item) => sum + item, 0);
+    const offset = circumference - (previous / Math.max(1, total)) * circumference;
+    return {
+      idx,
+      value,
+      length,
+      offset
+    };
+  });
+
+  return (
+    <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
+      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Конверсия заказов</div>
+      <div className="grid gap-2 px-4 pb-4 pt-4 sm:grid-cols-[160px_1fr] sm:items-center">
+        <div className="mx-auto">
+          <svg width="150" height="150" viewBox="0 0 150 150">
+            <circle cx="75" cy="75" r={radius} fill="none" stroke="rgba(15,23,42,0.08)" strokeWidth="16" />
+            {segments.map((segment) => (
+              <circle
+                key={segment.idx}
+                cx="75"
+                cy="75"
+                r={radius}
+                fill="none"
+                stroke={colors[segment.idx]}
+                strokeWidth="16"
+                strokeDasharray={`${Math.max(segment.length, 0)} ${circumference}`}
+                strokeDashoffset={segment.offset}
+                strokeLinecap="round"
+                transform="rotate(-90 75 75)"
+              />
+            ))}
+            <text x="75" y="69" textAnchor="middle" className="fill-black/45 text-[11px] font-semibold uppercase tracking-[0.12em]">
+              всего
+            </text>
+            <text x="75" y="92" textAnchor="middle" className="fill-black text-[26px] font-extrabold">
+              {total}
+            </text>
+          </svg>
+        </div>
+
+        <div className="space-y-2">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm">
+            <div className="font-semibold text-emerald-700">Доставлено</div>
+            <div className="text-xs text-emerald-700/80">
+              {delivered} заказов · {total > 0 ? Math.round((delivered / total) * 100) : 0}%
+            </div>
+          </div>
+          <div className="rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2 text-sm">
+            <div className="font-semibold text-sky-700">В работе</div>
+            <div className="text-xs text-sky-700/80">
+              {pending} заказов · {total > 0 ? Math.round((pending / total) * 100) : 0}%
+            </div>
+          </div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm">
+            <div className="font-semibold text-rose-700">Отменено</div>
+            <div className="text-xs text-rose-700/80">
+              {canceled} заказов · {total > 0 ? Math.round((canceled / total) * 100) : 0}%
+            </div>
+          </div>
+        </div>
       </div>
     </Card>
   );
@@ -174,11 +361,11 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
   const active = items[Math.min(activeIndex, Math.max(0, items.length - 1))] ?? null;
 
   return (
-    <Card className="overflow-hidden p-0">
-      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Топ блюд</div>
+    <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
+      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Топ блюд</div>
       <div className="px-4 pb-4 pt-3">
         {items.length === 0 ? (
-          <div className="text-sm text-black/50">Пока нет доставленных заказов.</div>
+          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">Пока нет доставленных заказов.</div>
         ) : (
           <div className="space-y-2">
             {items.map((item, idx) => {
@@ -192,12 +379,15 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
                   onFocus={() => setActiveIndex(idx)}
                   onClick={() => setActiveIndex(idx)}
                   className={`relative w-full overflow-hidden rounded-2xl border px-3 py-2 text-left text-sm transition ${
-                    isActive ? "border-cyan-300 bg-cyan-50/70" : "border-black/10 bg-white/80"
+                    isActive ? "border-cyan-300 bg-cyan-50/70 shadow-[0_10px_24px_-18px_rgba(14,165,233,0.8)]" : "border-black/10 bg-white/80"
                   }`}
                 >
-                  <div className="absolute inset-y-0 left-0 bg-cyan-300/35" style={{ width: `${width}%` }} />
+                  <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-300/35 to-sky-300/20" style={{ width: `${width}%` }} />
                   <div className="relative flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1 truncate font-semibold">{item.title}</div>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/5 text-[11px] font-bold text-black/70">{idx + 1}</span>
+                      <span className="truncate font-semibold">{item.title}</span>
+                    </div>
                     <div className="shrink-0 text-xs font-semibold text-black/70">{item.qty} шт.</div>
                   </div>
                 </button>
@@ -205,8 +395,8 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
             })}
 
             {active ? (
-              <div className="mt-2 rounded-2xl border border-black/10 bg-white/80 p-3 text-sm">
-                <div className="font-semibold">{active.title}</div>
+              <div className="mt-2 rounded-2xl border border-black/10 bg-gradient-to-r from-white to-cyan-50/70 p-3 text-sm">
+                <div className="font-semibold text-black/85">{active.title}</div>
                 <div className="mt-1 text-xs text-black/60">Количество: {active.qty} · Выручка: {formatKgs(active.revenueKgs)}</div>
               </div>
             ) : null}
@@ -258,71 +448,106 @@ export default function AdminReportsPage() {
   const daily = report?.daily ?? [];
   const topItems = report?.topItems ?? [];
 
-  const conversion = useMemo(() => {
-    if (!summary || summary.totalOrders === 0) return 0;
-    return Math.round((summary.totalDelivered / summary.totalOrders) * 100);
-  }, [summary]);
+  const revenueValues = daily.map((row) => row.revenueKgs);
+  const ordersValues = daily.map((row) => row.orders);
+  const deliveredValues = daily.map((row) => row.delivered);
+  const avgCheckValues = daily.map((row) => row.avgCheckKgs);
 
   return (
     <main className="min-h-screen p-5">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xs text-black/50">Админка</div>
-            <div className="text-3xl font-extrabold">Отчеты</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link className="text-sm text-black/60 underline" href="/admin">
-              Назад
-            </Link>
-            <AdminLogoutButton className="px-3 py-2 text-sm" />
-          </div>
-        </div>
-
-        <div className="mt-4 inline-flex gap-2 rounded-2xl border border-black/10 bg-white p-1">
-          {[7, 14, 30].map((value) => (
-            <button
-              key={value}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${days === value ? "bg-black text-white" : "text-black/70"}`}
-              onClick={() => setDays(value)}
-            >
-              {value} дней
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-4">
-          <KpiCard label="Выручка" value={formatKgs(summary?.totalRevenueKgs ?? 0)} />
-          <KpiCard label="Заказы" value={summary?.totalOrders ?? 0} />
-          <KpiCard label="Средний чек" value={formatKgs(summary?.avgCheckKgs ?? 0)} />
-          <KpiCard label="Доставлено / Конверсия" value={`${summary?.totalDelivered ?? 0} / ${conversion}%`} />
-        </div>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <RevenueChart rows={daily} />
-          <TopItemsChart items={topItems} />
-        </div>
-
-        <Card className="mt-5 overflow-hidden p-0">
-          <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Журнал действий админа</div>
-          <div className="max-h-80 overflow-auto px-4 py-3">
-            <div className="space-y-2">
-              {audit.map((row) => (
-                <div key={row.id} className="rounded-xl border border-black/10 bg-white/80 px-3 py-2 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-semibold">{row.action}</div>
-                    <div className="text-xs text-black/55">{new Date(row.createdAt).toLocaleString()}</div>
-                  </div>
-                  <div className="mt-1 text-xs text-black/60">
-                    {row.actor} · {row.actorRole}
-                    {row.orderId ? ` · Заказ #${row.orderId.slice(-6)}` : ""}
-                  </div>
-                </div>
-              ))}
-              {!loading && audit.length === 0 && <div className="text-sm text-black/50">Журнал пока пуст.</div>}
+      <div className="mx-auto max-w-6xl">
+        <div className="rounded-[28px] border border-white/60 bg-gradient-to-br from-white/95 via-white/88 to-slate-100/70 p-5 shadow-[0_30px_80px_-52px_rgba(15,23,42,0.62)] backdrop-blur">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.14em] text-black/45">Админка</div>
+              <div className="mt-1 text-3xl font-extrabold text-black/90">Отчеты</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black/65" href="/admin">
+                Назад
+              </Link>
+              <AdminLogoutButton className="px-3 py-2 text-sm" />
             </div>
           </div>
-        </Card>
+
+          <div className="mt-4 inline-flex gap-2 rounded-2xl border border-black/10 bg-white p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+            {[7, 14, 30].map((value) => (
+              <button
+                key={value}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${days === value ? "bg-black text-white" : "text-black/70"}`}
+                onClick={() => setDays(value)}
+              >
+                {value} дней
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              label="Выручка"
+              value={formatKgs(summary?.totalRevenueKgs ?? 0)}
+              values={revenueValues}
+              stroke="#0f172a"
+              fill="#0891b2"
+              accent="bg-cyan-300/30"
+            />
+            <KpiCard
+              label="Заказы"
+              value={summary?.totalOrders ?? 0}
+              values={ordersValues}
+              stroke="#0ea5e9"
+              fill="#38bdf8"
+              accent="bg-sky-300/30"
+            />
+            <KpiCard
+              label="Доставлено"
+              value={summary?.totalDelivered ?? 0}
+              values={deliveredValues}
+              stroke="#10b981"
+              fill="#34d399"
+              accent="bg-emerald-300/30"
+            />
+            <KpiCard
+              label="Средний чек"
+              value={formatKgs(summary?.avgCheckKgs ?? 0)}
+              values={avgCheckValues}
+              stroke="#a855f7"
+              fill="#c084fc"
+              accent="bg-fuchsia-300/30"
+            />
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+            <RevenueTrendChart rows={daily} />
+            <ConversionDonut summary={summary} />
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+            <TopItemsChart items={topItems} />
+
+            <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
+              <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Журнал действий</div>
+              <div className="max-h-[26rem] overflow-auto px-4 pb-4 pt-3">
+                <div className="space-y-2">
+                  {audit.map((row) => (
+                    <div key={row.id} className="rounded-xl border border-black/10 bg-white/88 px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold text-black/85">{row.action}</div>
+                        <div className="text-xs text-black/55">{new Date(row.createdAt).toLocaleString()}</div>
+                      </div>
+                      <div className="mt-1 text-xs text-black/60">
+                        {row.actor} · {row.actorRole}
+                        {row.orderId ? ` · Заказ #${row.orderId.slice(-6)}` : ""}
+                      </div>
+                    </div>
+                  ))}
+
+                  {!loading && audit.length === 0 ? <div className="rounded-xl border border-black/10 bg-white/80 p-3 text-sm text-black/55">Журнал пока пуст.</div> : null}
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
       </div>
     </main>
   );
