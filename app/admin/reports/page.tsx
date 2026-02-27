@@ -87,12 +87,12 @@ export default function AdminReportsPage() {
       <div className="mx-auto max-w-4xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs text-black/50">Админка</div>
-            <div className="text-3xl font-extrabold">Отчеты</div>
+            <div className="text-xs text-black/50">РђРґРјРёРЅРєР°</div>
+            <div className="text-3xl font-extrabold">РћС‚С‡РµС‚С‹</div>
           </div>
           <div className="flex items-center gap-2">
             <Link className="text-sm text-black/60 underline" href="/admin">
-              Назад
+              РќР°Р·Р°Рґ
             </Link>
             <AdminLogoutButton className="px-3 py-2 text-sm" />
           </div>
@@ -105,33 +105,33 @@ export default function AdminReportsPage() {
               className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${days === value ? "bg-black text-white" : "text-black/70"}`}
               onClick={() => setDays(value)}
             >
-              {value} дней
+              {value} РґРЅРµР№
             </button>
           ))}
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <Card className="p-4">
-            <div className="text-xs text-black/55">Выручка</div>
+            <div className="text-xs text-black/55">Р’С‹СЂСѓС‡РєР°</div>
             <div className="mt-1 text-2xl font-extrabold">{formatKgs(summary?.totalRevenueKgs ?? 0)}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-xs text-black/55">Заказы</div>
+            <div className="text-xs text-black/55">Р—Р°РєР°Р·С‹</div>
             <div className="mt-1 text-2xl font-extrabold">{summary?.totalOrders ?? 0}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-xs text-black/55">Средний чек</div>
+            <div className="text-xs text-black/55">РЎСЂРµРґРЅРёР№ С‡РµРє</div>
             <div className="mt-1 text-2xl font-extrabold">{formatKgs(summary?.avgCheckKgs ?? 0)}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-xs text-black/55">Доставлено / Конверсия</div>
+            <div className="text-xs text-black/55">Р”РѕСЃС‚Р°РІР»РµРЅРѕ / РљРѕРЅРІРµСЂСЃРёСЏ</div>
             <div className="mt-1 text-2xl font-extrabold">{summary?.totalDelivered ?? 0} / {conversion}%</div>
           </Card>
         </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <Card className="overflow-hidden p-0">
-            <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Дневная статистика</div>
+            <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Р”РЅРµРІРЅР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР°</div>
             <div className="max-h-96 overflow-auto px-4 py-3">
               <div className="space-y-2">
                 {daily.map((row) => (
@@ -140,32 +140,32 @@ export default function AdminReportsPage() {
                       <div className="font-semibold">{row.date}</div>
                       <div className="font-bold">{formatKgs(row.revenueKgs)}</div>
                     </div>
-                    <div className="mt-1 text-xs text-black/60">Заказы: {row.orders} · Доставлено: {row.delivered} · Отменено: {row.canceled}</div>
+                    <div className="mt-1 text-xs text-black/60">Р—Р°РєР°Р·С‹: {row.orders} В· Р”РѕСЃС‚Р°РІР»РµРЅРѕ: {row.delivered} В· РћС‚РјРµРЅРµРЅРѕ: {row.canceled}</div>
                   </div>
                 ))}
-                {!loading && daily.length === 0 && <div className="text-sm text-black/50">Нет данных за выбранный период.</div>}
+                {!loading && daily.length === 0 && <div className="text-sm text-black/50">РќРµС‚ РґР°РЅРЅС‹С… Р·Р° РІС‹Р±СЂР°РЅРЅС‹Р№ РїРµСЂРёРѕРґ.</div>}
               </div>
             </div>
           </Card>
 
           <Card className="overflow-hidden p-0">
-            <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Топ блюд</div>
+            <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">РўРѕРї Р±Р»СЋРґ</div>
             <div className="max-h-96 overflow-auto px-4 py-3">
               <div className="space-y-2">
                 {topItems.map((row) => (
                   <div key={row.title} className="rounded-xl border border-black/10 bg-white/80 px-3 py-2 text-sm">
                     <div className="font-semibold">{row.title}</div>
-                    <div className="mt-1 text-xs text-black/60">Кол-во: {row.qty} · Выручка: {formatKgs(row.revenueKgs)}</div>
+                    <div className="mt-1 text-xs text-black/60">РљРѕР»-РІРѕ: {row.qty} В· Р’С‹СЂСѓС‡РєР°: {formatKgs(row.revenueKgs)}</div>
                   </div>
                 ))}
-                {!loading && topItems.length === 0 && <div className="text-sm text-black/50">Пока нет доставленных заказов.</div>}
+                {!loading && topItems.length === 0 && <div className="text-sm text-black/50">РџРѕРєР° РЅРµС‚ РґРѕСЃС‚Р°РІР»РµРЅРЅС‹С… Р·Р°РєР°Р·РѕРІ.</div>}
               </div>
             </div>
           </Card>
         </div>
 
         <Card className="mt-5 overflow-hidden p-0">
-          <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Журнал действий админа</div>
+          <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold">Р–СѓСЂРЅР°Р» РґРµР№СЃС‚РІРёР№ Р°РґРјРёРЅР°</div>
           <div className="max-h-80 overflow-auto px-4 py-3">
             <div className="space-y-2">
               {audit.map((row) => (
@@ -175,12 +175,12 @@ export default function AdminReportsPage() {
                     <div className="text-xs text-black/55">{new Date(row.createdAt).toLocaleString()}</div>
                   </div>
                   <div className="mt-1 text-xs text-black/60">
-                    {row.actor} · {row.actorRole}
-                    {row.orderId ? ` · Заказ #${row.orderId.slice(-6)}` : ""}
+                    {row.actor} В· {row.actorRole}
+                    {row.orderId ? ` В· Р—Р°РєР°Р· #${row.orderId.slice(-6)}` : ""}
                   </div>
                 </div>
               ))}
-              {!loading && audit.length === 0 && <div className="text-sm text-black/50">Журнал пока пуст.</div>}
+              {!loading && audit.length === 0 && <div className="text-sm text-black/50">Р–СѓСЂРЅР°Р» РїРѕРєР° РїСѓСЃС‚.</div>}
             </div>
           </div>
         </Card>
