@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { Button, Card } from "@/components/ui";
@@ -18,7 +18,6 @@ type StaffMember = {
   firstName: string;
   lastName: string;
   phone: string;
-  avatarUrl: string | null;
 };
 
 type StaffResponse = {
@@ -33,8 +32,11 @@ const ROLE_LABEL: Record<AdminRole, string> = {
   courier: "Курьер"
 };
 
-const AVATAR_VIEWPORT = 280;
-const AVATAR_EXPORT_SIZE = 800;
+const ROLE_ICON_TONE: Record<AdminRole, string> = {
+  owner: "border-amber-300/70 bg-amber-50 text-amber-700",
+  operator: "border-sky-300/70 bg-sky-50 text-sky-700",
+  courier: "border-emerald-300/70 bg-emerald-50 text-emerald-700"
+};
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Ошибка";
@@ -69,39 +71,13 @@ function memberName(firstName: string, lastName: string) {
   return full || "Имя не заполнено";
 }
 
-function profileInitials(firstName: string, lastName: string, fallbackUser: string) {
-  const f = firstName.trim().charAt(0);
-  const l = lastName.trim().charAt(0);
-  const fallback = fallbackUser.trim().charAt(0);
-  const value = `${f}${l}`.trim() || fallback || "?";
-  return value.toUpperCase();
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function clampOffset(value: number, zoom: number) {
-  const max = Math.max(0, (AVATAR_VIEWPORT * zoom - AVATAR_VIEWPORT) / 2);
-  return clamp(value, -max, max);
-}
-
-async function loadImage(src: string) {
-  return await new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new window.Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Не удалось загрузить изображение"));
-    img.src = src;
-  });
-}
-
 function SelectField({ value, onChange, children, className }: { value: string; onChange: (next: string) => void; children: ReactNode; className?: string }) {
   return (
     <div className={`relative ${className ?? ""}`}>
       <select
         className="h-11 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 pr-12 text-sm text-black/90"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
       >
         {children}
       </select>
@@ -114,15 +90,41 @@ function SelectField({ value, onChange, children, className }: { value: string; 
   );
 }
 
-function Avatar({ member }: { member: StaffMember }) {
+function RoleGlyph({ role }: { role: AdminRole }) {
+  if (role === "owner") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+        <path d="M4 17L6 7L12 12L18 7L20 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 17H20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (role === "operator") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+        <path d="M4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="4" y="11" width="4" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+        <rect x="16" y="11" width="4" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M12 20H14.5C16.4 20 18 18.4 18 16.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   return (
-    <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border border-black/10 bg-gradient-to-br from-white to-slate-100 text-sm font-black text-black/70 shadow-[0_8px_20px_rgba(15,23,42,0.12)]">
-      {member.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={member.avatarUrl} alt={memberName(member.firstName, member.lastName)} className="h-full w-full object-cover" />
-      ) : (
-        <span>{profileInitials(member.firstName, member.lastName, member.user)}</span>
-      )}
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+      <rect x="3" y="11" width="11" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M14 13H17.5L20 15.5V17H14V13Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="7" cy="18" r="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="17" cy="18" r="1.8" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function RoleIcon({ role }: { role: AdminRole }) {
+  return (
+    <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-full border shadow-[0_8px_20px_rgba(15,23,42,0.12)] ${ROLE_ICON_TONE[role]}`}>
+      <RoleGlyph role={role} />
     </div>
   );
 }
@@ -133,7 +135,6 @@ export default function AdminStaffPage() {
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [username, setUsername] = useState("");
@@ -148,20 +149,9 @@ export default function AdminStaffPage() {
   const [profileFirstName, setProfileFirstName] = useState("");
   const [profileLastName, setProfileLastName] = useState("");
   const [profilePhone, setProfilePhone] = useState("996");
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState("");
-
-  const [avatarSourceUrl, setAvatarSourceUrl] = useState<string | null>(null);
-  const [avatarZoom, setAvatarZoom] = useState(1);
-  const [avatarOffsetX, setAvatarOffsetX] = useState(0);
-  const [avatarOffsetY, setAvatarOffsetY] = useState(0);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const [avatarDragging, setAvatarDragging] = useState(false);
 
   const [roleDraft, setRoleDraft] = useState<Record<string, AdminRole>>({});
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
 
   const canManage = data?.role === "owner";
 
@@ -198,12 +188,10 @@ export default function AdminStaffPage() {
     setProfileFirstName(currentUserMember.firstName || "");
     setProfileLastName(currentUserMember.lastName || "");
     setProfilePhone(formatPhoneInput(currentUserMember.phone || "996"));
-    setProfileAvatarUrl(currentUserMember.avatarUrl || "");
   }, [currentUserMember]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const anyModalOpen = createModalOpen || profileModalOpen || avatarEditorOpen;
+    const anyModalOpen = createModalOpen || profileModalOpen;
     if (!anyModalOpen) return;
 
     const previousOverflow = document.body.style.overflow;
@@ -211,10 +199,6 @@ export default function AdminStaffPage() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (avatarEditorOpen && !avatarUploading) {
-          closeAvatarEditor();
-          return;
-        }
         setCreateModalOpen(false);
         setProfileModalOpen(false);
       }
@@ -225,7 +209,7 @@ export default function AdminStaffPage() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [createModalOpen, profileModalOpen, avatarEditorOpen, avatarUploading]);
+  }, [createModalOpen, profileModalOpen]);
 
   function openCreateModal() {
     setUsername("");
@@ -236,106 +220,6 @@ export default function AdminStaffPage() {
     setLastName("");
     setPhone("996");
     setCreateModalOpen(true);
-  }
-
-  function closeAvatarEditor() {
-    if (avatarUploading) return;
-    if (avatarSourceUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(avatarSourceUrl);
-    }
-    setAvatarEditorOpen(false);
-    setAvatarSourceUrl(null);
-    setAvatarZoom(1);
-    setAvatarOffsetX(0);
-    setAvatarOffsetY(0);
-    setAvatarDragging(false);
-    dragRef.current = null;
-  }
-
-  async function uploadAvatarFile(file: File) {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("/api/admin/upload", {
-      method: "POST",
-      body: formData
-    });
-
-    const json = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
-    if (!res.ok || !json?.url) {
-      throw new Error(json?.error ?? "Не удалось загрузить фото");
-    }
-
-    return json.url;
-  }
-
-  async function handleAvatarFilePick(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Нужен файл изображения");
-      return;
-    }
-
-    if (avatarSourceUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(avatarSourceUrl);
-    }
-
-    const blobUrl = URL.createObjectURL(file);
-    setAvatarSourceUrl(blobUrl);
-    setAvatarZoom(1);
-    setAvatarOffsetX(0);
-    setAvatarOffsetY(0);
-    setAvatarEditorOpen(true);
-  }
-
-  async function applyAvatarCrop() {
-    if (!avatarSourceUrl) return;
-
-    setAvatarUploading(true);
-    try {
-      const img = await loadImage(avatarSourceUrl);
-      const canvas = document.createElement("canvas");
-      canvas.width = AVATAR_EXPORT_SIZE;
-      canvas.height = AVATAR_EXPORT_SIZE;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Холст недоступен");
-
-      const baseScale = Math.max(AVATAR_VIEWPORT / img.naturalWidth, AVATAR_VIEWPORT / img.naturalHeight);
-      const totalScale = baseScale * avatarZoom;
-      const displayW = img.naturalWidth * totalScale;
-      const displayH = img.naturalHeight * totalScale;
-      const x0 = AVATAR_VIEWPORT / 2 - displayW / 2 + avatarOffsetX;
-      const y0 = AVATAR_VIEWPORT / 2 - displayH / 2 + avatarOffsetY;
-
-      const sx = (0 - x0) / totalScale;
-      const sy = (0 - y0) / totalScale;
-      const sw = AVATAR_VIEWPORT / totalScale;
-      const sh = AVATAR_VIEWPORT / totalScale;
-
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, AVATAR_EXPORT_SIZE, AVATAR_EXPORT_SIZE);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((result) => {
-          if (result) resolve(result);
-          else reject(new Error("Не удалось подготовить фото"));
-        }, "image/webp", 0.92);
-      });
-
-      const file = new File([blob], `avatar-${Date.now()}.webp`, { type: "image/webp" });
-      const uploadedUrl = await uploadAvatarFile(file);
-      setProfileAvatarUrl(uploadedUrl);
-      toast.success("Аватар загружен");
-      closeAvatarEditor();
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setAvatarUploading(false);
-    }
   }
 
   async function createUser() {
@@ -393,8 +277,7 @@ export default function AdminStaffPage() {
         body: JSON.stringify({
           firstName: profileFirstName.trim(),
           lastName: profileLastName.trim(),
-          phone: profilePhone,
-          avatarUrl: profileAvatarUrl.trim() || null
+          phone: profilePhone
         })
       });
 
@@ -436,40 +319,6 @@ export default function AdminStaffPage() {
       setSavingRoleId(null);
     }
   }
-
-  function handleCropPointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    dragRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      baseX: avatarOffsetX,
-      baseY: avatarOffsetY
-    };
-    setAvatarDragging(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-
-  function handleCropPointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (!dragRef.current) return;
-    const deltaX = event.clientX - dragRef.current.startX;
-    const deltaY = event.clientY - dragRef.current.startY;
-
-    setAvatarOffsetX(clampOffset(dragRef.current.baseX + deltaX, avatarZoom));
-    setAvatarOffsetY(clampOffset(dragRef.current.baseY + deltaY, avatarZoom));
-  }
-
-  function handleCropPointerUp() {
-    dragRef.current = null;
-    setAvatarDragging(false);
-  }
-
-  function handleZoomChange(next: number) {
-    const clamped = clamp(next, 1, 3);
-    setAvatarZoom(clamped);
-    setAvatarOffsetX((current) => clampOffset(current, clamped));
-    setAvatarOffsetY((current) => clampOffset(current, clamped));
-  }
-
-  const profilePreviewInitials = profileInitials(profileFirstName, profileLastName, currentUserMember?.user ?? "?");
 
   return (
     <main className="min-h-screen p-5">
@@ -524,7 +373,7 @@ export default function AdminStaffPage() {
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <Avatar member={member} />
+                        <RoleIcon role={member.role} />
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <div className="truncate text-lg font-black text-black/90">{memberName(member.firstName, member.lastName)}</div>
@@ -587,7 +436,7 @@ export default function AdminStaffPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-xl font-extrabold">Новый сотрудник</div>
-                <div className="mt-1 text-sm text-black/55">Заполните данные. Аватар сотрудник поставит сам в своем профиле.</div>
+                <div className="mt-1 text-sm text-black/55">Заполните данные. Иконка сотрудника ставится автоматически по роли.</div>
               </div>
               <button className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-black/65" onClick={() => setCreateModalOpen(false)}>
                 Закрыть
@@ -602,11 +451,14 @@ export default function AdminStaffPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
-              <SelectField value={role} onChange={(next) => setRole(next as AdminRole)}>
-                <option value="owner">Владелец</option>
-                <option value="operator">Оператор</option>
-                <option value="courier">Курьер</option>
-              </SelectField>
+              <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-white p-2">
+                <RoleIcon role={role} />
+                <SelectField value={role} onChange={(next) => setRole(next as AdminRole)} className="flex-1">
+                  <option value="owner">Владелец</option>
+                  <option value="operator">Оператор</option>
+                  <option value="courier">Курьер</option>
+                </SelectField>
+              </div>
 
               <input
                 className="rounded-xl border border-black/10 bg-white px-3 py-3"
@@ -667,7 +519,7 @@ export default function AdminStaffPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-xl font-extrabold">Мой профиль</div>
-                <div className="mt-1 text-sm text-black/55">Имя, номер и аватар сотрудника.</div>
+                <div className="mt-1 text-sm text-black/55">Фото отключены. В интерфейсе используется иконка по роли.</div>
               </div>
               <button className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-black/65" onClick={() => setProfileModalOpen(false)}>
                 Закрыть
@@ -675,31 +527,11 @@ export default function AdminStaffPage() {
             </div>
 
             <div className="mt-4 rounded-2xl border border-black/10 bg-white/90 p-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-full border border-black/10 bg-slate-100 text-lg font-extrabold text-black/65">
-                  {profileAvatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profileAvatarUrl} alt="Аватар" className="h-full w-full object-cover" />
-                  ) : (
-                    <span>{profilePreviewInitials}</span>
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-black/85">Фото профиля</div>
-                  <div className="mt-1 text-xs text-black/55">Загрузка с устройства с круговой подгонкой перед сохранением.</div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleAvatarFilePick(e)} />
-                  <Button className="h-10 px-4 text-sm" onClick={() => fileInputRef.current?.click()}>
-                    Загрузить фото
-                  </Button>
-                  {profileAvatarUrl ? (
-                    <Button variant="secondary" className="h-10 px-4 text-sm" onClick={() => setProfileAvatarUrl("")}>
-                      Убрать
-                    </Button>
-                  ) : null}
+              <div className="flex items-center gap-3">
+                <RoleIcon role={currentUserMember?.role ?? "operator"} />
+                <div>
+                  <div className="text-sm font-semibold text-black/85">Иконка роли</div>
+                  <div className="mt-1 text-xs text-black/55">Меняется автоматически, если изменить роль сотрудника.</div>
                 </div>
               </div>
             </div>
@@ -737,66 +569,6 @@ export default function AdminStaffPage() {
           </Card>
         </div>
       ) : null}
-
-      {avatarEditorOpen && avatarSourceUrl ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <button className="absolute inset-0 bg-black/45 backdrop-blur-sm" aria-label="Закрыть окно редактирования фото" onClick={closeAvatarEditor} />
-
-          <Card className="relative z-10 w-full max-w-md p-4">
-            <div className="text-lg font-extrabold">Подгонка аватара</div>
-            <div className="mt-1 text-xs text-black/55">Перетащите фото и подберите масштаб так, как нужно в круге.</div>
-
-            <div className="mt-4 flex justify-center">
-              <div
-                className={`relative overflow-hidden rounded-2xl border border-black/10 bg-slate-200 ${avatarDragging ? "cursor-grabbing" : "cursor-grab"}`}
-                style={{ width: AVATAR_VIEWPORT, height: AVATAR_VIEWPORT, touchAction: "none" }}
-                onPointerDown={handleCropPointerDown}
-                onPointerMove={handleCropPointerMove}
-                onPointerUp={handleCropPointerUp}
-                onPointerCancel={handleCropPointerUp}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={avatarSourceUrl}
-                  alt="Редактирование аватара"
-                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-                  style={{ transform: `translate(${avatarOffsetX}px, ${avatarOffsetY}px) scale(${avatarZoom})`, transformOrigin: "center center" }}
-                  draggable={false}
-                />
-
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_108px,rgba(0,0,0,0.45)_109px)]" />
-                <div className="pointer-events-none absolute left-1/2 top-1/2 h-[216px] w-[216px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/90 shadow-[0_0_0_1px_rgba(15,23,42,0.15)]" />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="mb-1 flex items-center justify-between text-xs text-black/60">
-                <span>Масштаб</span>
-                <span>{avatarZoom.toFixed(2)}x</span>
-              </div>
-              <input
-                type="range"
-                min={1}
-                max={3}
-                step={0.01}
-                value={avatarZoom}
-                onChange={(e) => handleZoomChange(Number(e.target.value))}
-                className="w-full accent-black"
-              />
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <Button variant="secondary" className="h-11 flex-1" onClick={closeAvatarEditor} disabled={avatarUploading}>
-                Отмена
-              </Button>
-              <Button className="h-11 flex-1" onClick={() => void applyAvatarCrop()} disabled={avatarUploading}>
-                {avatarUploading ? "Загружаем..." : "Применить"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      ) : null}
     </main>
   );
 }
-
