@@ -39,6 +39,7 @@ export default function AdminStaffPage() {
   const [submitting, setSubmitting] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [role, setRole] = useState<AdminRole>("operator");
   const [roleDraft, setRoleDraft] = useState<Record<string, AdminRole>>({});
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
@@ -69,8 +70,13 @@ export default function AdminStaffPage() {
 
   async function createUser() {
     if (!canManage) return;
-    if (!username.trim() || !password) {
-      toast.error("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043b\u043e\u0433\u0438\u043d \u0438 \u043f\u0430\u0440\u043e\u043b\u044c");
+    if (!username.trim() || !password || !passwordConfirm) {
+      toast.error("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043b\u043e\u0433\u0438\u043d \u0438 \u043e\u0431\u0430 \u043f\u043e\u043b\u044f \u043f\u0430\u0440\u043e\u043b\u044f");
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      toast.error("\u041f\u0430\u0440\u043e\u043b\u0438 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u044e\u0442");
       return;
     }
 
@@ -87,6 +93,7 @@ export default function AdminStaffPage() {
       toast.success("\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0441\u043e\u0437\u0434\u0430\u043d");
       setUsername("");
       setPassword("");
+      setPasswordConfirm("");
       setRole("operator");
       await load();
     } catch (error: unknown) {
@@ -142,7 +149,7 @@ export default function AdminStaffPage() {
         {canManage ? (
           <Card className="mt-5 p-4">
             <div className="text-sm font-semibold">{"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u0430"}</div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <input
                 className="rounded-xl border border-black/10 bg-white px-3 py-3"
                 placeholder={"\u041b\u043e\u0433\u0438\u043d"}
@@ -158,7 +165,15 @@ export default function AdminStaffPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <select className="rounded-xl border border-black/10 bg-white px-3 py-3" value={role} onChange={(e) => setRole(e.target.value as AdminRole)}>
+              <input
+                className="rounded-xl border border-black/10 bg-white px-3 py-3"
+                type="password"
+                placeholder={"\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043f\u0430\u0440\u043e\u043b\u044c"}
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+              />
+              <select className="rounded-xl border border-black/10 bg-white px-3 py-3 sm:col-span-2" value={role} onChange={(e) => setRole(e.target.value as AdminRole)}>
                 <option value="owner">{"\u0412\u043b\u0430\u0434\u0435\u043b\u0435\u0446"}</option>
                 <option value="operator">{"\u041e\u043f\u0435\u0440\u0430\u0442\u043e\u0440"}</option>
                 <option value="courier">{"\u041a\u0443\u0440\u044c\u0435\u0440"}</option>
