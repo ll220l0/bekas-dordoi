@@ -217,13 +217,13 @@ function RevenueTrendChart({ rows }: { rows: DailyRow[] }) {
   return (
     <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
       <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
-        <div className="text-sm font-semibold text-black/80">РўСЂРµРЅРґ РІС‹СЂСѓС‡РєРё</div>
-        <div className="hidden text-xs text-black/50 sm:block">РќР°РІРµРґРёС‚Рµ РЅР° С‚РѕС‡РєСѓ</div>
+        <div className="text-sm font-semibold text-black/80">Тренд выручки</div>
+        <div className="hidden text-xs text-black/50 sm:block">Наведите на точку</div>
       </div>
 
       <div className="px-4 pb-4 pt-3">
         {rows.length === 0 ? (
-          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">РќРµС‚ РґР°РЅРЅС‹С… Р·Р° РІС‹Р±СЂР°РЅРЅС‹Р№ РїРµСЂРёРѕРґ.</div>
+          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">Нет данных за выбранный период.</div>
         ) : (
           <>
             <div className="-mx-1 overflow-x-auto px-1">
@@ -279,7 +279,7 @@ function RevenueTrendChart({ rows }: { rows: DailyRow[] }) {
                   <div className="text-base font-extrabold text-black/90">{formatKgs(activePoint.revenueKgs)}</div>
                 </div>
                 <div className="mt-1 text-xs text-black/60">
-                  Р—Р°РєР°Р·С‹: {activePoint.orders} В· Р”РѕСЃС‚Р°РІР»РµРЅРѕ: {activePoint.delivered} В· РћС‚РјРµРЅРµРЅРѕ: {activePoint.canceled} В· РЎСЂРµРґРЅРёР№ С‡РµРє: {formatKgs(activePoint.avgCheckKgs)}
+                  Заказы: {activePoint.orders} · Доставлено: {activePoint.delivered} · Отменено: {activePoint.canceled} · Средний чек: {formatKgs(activePoint.avgCheckKgs)}
                 </div>
               </div>
             ) : null}
@@ -310,7 +310,7 @@ function ConversionDonut({ summary }: { summary: ReportResp["summary"] | null | 
 
   return (
     <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
-      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">РљРѕРЅРІРµСЂСЃРёСЏ Р·Р°РєР°Р·РѕРІ</div>
+      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Конверсия заказов</div>
       <div className="grid gap-3 px-4 pb-4 pt-4 sm:grid-cols-[160px_1fr] sm:items-center">
         <div className="mx-auto">
           <div className="relative h-32 w-32 rounded-full sm:h-[150px] sm:w-[150px]" style={{ background: conicGradient }}>
@@ -324,21 +324,21 @@ function ConversionDonut({ summary }: { summary: ReportResp["summary"] | null | 
 
         <div className="space-y-2">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm">
-            <div className="font-semibold text-emerald-700">Р”РѕСЃС‚Р°РІР»РµРЅРѕ</div>
+            <div className="font-semibold text-emerald-700">Доставлено</div>
             <div className="text-xs text-emerald-700/80">
-              {safeDelivered} Р·Р°РєР°Р·РѕРІ В· {totalSafe > 0 ? Math.round((safeDelivered / totalSafe) * 100) : 0}%
+              {safeDelivered} заказов · {totalSafe > 0 ? Math.round((safeDelivered / totalSafe) * 100) : 0}%
             </div>
           </div>
           <div className="rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2 text-sm">
-            <div className="font-semibold text-sky-700">Р’ СЂР°Р±РѕС‚Рµ</div>
+            <div className="font-semibold text-sky-700">В работе</div>
             <div className="text-xs text-sky-700/80">
-              {safePending} Р·Р°РєР°Р·РѕРІ В· {totalSafe > 0 ? Math.round((safePending / totalSafe) * 100) : 0}%
+              {safePending} заказов · {totalSafe > 0 ? Math.round((safePending / totalSafe) * 100) : 0}%
             </div>
           </div>
           <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm">
-            <div className="font-semibold text-rose-700">РћС‚РјРµРЅРµРЅРѕ</div>
+            <div className="font-semibold text-rose-700">Отменено</div>
             <div className="text-xs text-rose-700/80">
-              {safeCanceled} Р·Р°РєР°Р·РѕРІ В· {totalSafe > 0 ? Math.round((safeCanceled / totalSafe) * 100) : 0}%
+              {safeCanceled} заказов · {totalSafe > 0 ? Math.round((safeCanceled / totalSafe) * 100) : 0}%
             </div>
           </div>
         </div>
@@ -451,10 +451,10 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
 
   return (
     <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
-      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">РўРѕРї Р±Р»СЋРґ</div>
+      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Топ блюд</div>
       <div className="px-4 pb-4 pt-3">
         {items.length === 0 ? (
-          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">РџРѕРєР° РЅРµС‚ РґРѕСЃС‚Р°РІР»РµРЅРЅС‹С… Р·Р°РєР°Р·РѕРІ.</div>
+          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">Пока нет доставленных заказов.</div>
         ) : (
           <div className="space-y-2">
             {items.map((item, idx) => {
@@ -477,7 +477,7 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/5 text-[11px] font-bold text-black/70">{idx + 1}</span>
                       <span className="truncate font-semibold">{item.title}</span>
                     </div>
-                    <div className="shrink-0 text-xs font-semibold text-black/70">{item.qty} С€С‚.</div>
+                    <div className="shrink-0 text-xs font-semibold text-black/70">{item.qty} шт.</div>
                   </div>
                 </button>
               );
@@ -486,7 +486,7 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
             {active ? (
               <div className="mt-2 rounded-2xl border border-black/10 bg-gradient-to-r from-white to-cyan-50/70 p-3 text-sm">
                 <div className="font-semibold text-black/85">{active.title}</div>
-                <div className="mt-1 text-xs text-black/60">РљРѕР»РёС‡РµСЃС‚РІРѕ: {active.qty} В· Р’С‹СЂСѓС‡РєР°: {formatKgs(active.revenueKgs)}</div>
+                <div className="mt-1 text-xs text-black/60">Количество: {active.qty} · Выручка: {formatKgs(active.revenueKgs)}</div>
               </div>
             ) : null}
           </div>
@@ -549,12 +549,12 @@ export default function AdminReportsPage() {
         <div className="rounded-[24px] border border-white/60 bg-gradient-to-br from-white/95 via-white/88 to-slate-100/70 p-3 shadow-[0_30px_80px_-52px_rgba(15,23,42,0.62)] backdrop-blur sm:rounded-[28px] sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.14em] text-black/45">РђРґРјРёРЅРєР°</div>
-              <div className="mt-1 text-3xl font-extrabold text-black/90">РћС‚С‡РµС‚С‹</div>
+              <div className="text-xs uppercase tracking-[0.14em] text-black/45">Админка</div>
+              <div className="mt-1 text-3xl font-extrabold text-black/90">Отчеты</div>
             </div>
             <div className="flex items-center gap-2">
               <Link className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black/65" href="/admin">
-                РќР°Р·Р°Рґ
+                Назад
               </Link>
               <AdminLogoutButton className="px-3 py-2 text-sm" />
             </div>
@@ -567,14 +567,14 @@ export default function AdminReportsPage() {
                 className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition sm:px-3 sm:py-2 sm:text-sm ${days === value ? "bg-black text-white" : "text-black/70"}`}
                 onClick={() => setDays(value)}
               >
-                {value} РґРЅРµР№
+                {value} дней
               </button>
             ))}
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
-              label="Р’С‹СЂСѓС‡РєР°"
+              label="Выручка"
               value={formatKgs(summary?.totalRevenueKgs ?? 0)}
               values={revenueValues}
               stroke="#0284c7"
@@ -582,7 +582,7 @@ export default function AdminReportsPage() {
               accent="bg-cyan-300/30"
             />
             <KpiCard
-              label="Р—Р°РєР°Р·С‹"
+              label="Заказы"
               value={summary?.totalOrders ?? 0}
               values={ordersValues}
               stroke="#0ea5e9"
@@ -590,7 +590,7 @@ export default function AdminReportsPage() {
               accent="bg-sky-300/30"
             />
             <KpiCard
-              label="Р”РѕСЃС‚Р°РІР»РµРЅРѕ"
+              label="Доставлено"
               value={summary?.totalDelivered ?? 0}
               values={deliveredValues}
               stroke="#10b981"
@@ -598,7 +598,7 @@ export default function AdminReportsPage() {
               accent="bg-emerald-300/30"
             />
             <KpiCard
-              label="РЎСЂРµРґРЅРёР№ С‡РµРє"
+              label="Средний чек"
               value={formatKgs(summary?.avgCheckKgs ?? 0)}
               values={avgCheckValues}
               stroke="#a855f7"
@@ -620,7 +620,7 @@ export default function AdminReportsPage() {
             <TopItemsChart items={topItems} />
 
             <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
-              <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Р–СѓСЂРЅР°Р» РґРµР№СЃС‚РІРёР№</div>
+              <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Журнал действий</div>
               <div className="max-h-[20rem] overflow-auto px-4 pb-4 pt-3 sm:max-h-[26rem]">
                 <div className="space-y-2">
                   {audit.map((row) => (
@@ -630,13 +630,13 @@ export default function AdminReportsPage() {
                         <div className="text-xs text-black/55">{new Date(row.createdAt).toLocaleString()}</div>
                       </div>
                       <div className="mt-1 text-xs text-black/60">
-                        {row.actor} В· {row.actorRole}
-                        {row.orderId ? ` В· Р—Р°РєР°Р· #${row.orderId.slice(-6)}` : ""}
+                        {row.actor} · {row.actorRole}
+                        {row.orderId ? ` · Заказ #${row.orderId.slice(-6)}` : ""}
                       </div>
                     </div>
                   ))}
 
-                  {!loading && audit.length === 0 ? <div className="rounded-xl border border-black/10 bg-white/80 p-3 text-sm text-black/55">Р–СѓСЂРЅР°Р» РїРѕРєР° РїСѓСЃС‚.</div> : null}
+                  {!loading && audit.length === 0 ? <div className="rounded-xl border border-black/10 bg-white/80 p-3 text-sm text-black/55">Журнал пока пуст.</div> : null}
                 </div>
               </div>
             </Card>

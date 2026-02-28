@@ -121,7 +121,7 @@ function StatusProgress({ status }: { status: string }) {
     return (
       <div className="mt-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-        <div className="text-sm font-semibold text-amber-700">РћР¶РёРґР°РµРј РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ Р·Р°РєР°Р·Р°</div>
+        <div className="text-sm font-semibold text-amber-700">Ожидаем подтверждения заказа</div>
       </div>
     );
   }
@@ -132,7 +132,7 @@ function StatusProgress({ status }: { status: string }) {
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
           <IconCheck />
         </div>
-        <div className="text-sm font-semibold text-emerald-700">РЎРїР°СЃРёР±Рѕ Р·Р° РІС‹Р±РѕСЂ. Р—Р°РєР°Р· РґРѕСЃС‚Р°РІР»РµРЅ.</div>
+        <div className="text-sm font-semibold text-emerald-700">Спасибо за выбор. Заказ доставлен.</div>
       </div>
     );
   }
@@ -143,7 +143,7 @@ function StatusProgress({ status }: { status: string }) {
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
           <IconCheck />
         </div>
-        <div className="text-sm font-semibold text-emerald-700">Р—Р°РєР°Р· РїРѕРґС‚РІРµСЂР¶РґРµРЅ</div>
+        <div className="text-sm font-semibold text-emerald-700">Заказ подтвержден</div>
       </div>
     );
   }
@@ -153,7 +153,7 @@ function StatusProgress({ status }: { status: string }) {
       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-600 text-white">
         <IconAlert />
       </div>
-      <div className="text-sm font-semibold text-rose-700">Р—Р°РєР°Р· РѕС‚РјРµРЅРµРЅ</div>
+      <div className="text-sm font-semibold text-rose-700">Заказ отменен</div>
     </div>
   );
 }
@@ -288,7 +288,7 @@ function historyStatusIcon(status: string) {
       </span>
     );
   }
-  return <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">вЂў</span>;
+  return <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">•</span>;
 }
 
 export default function OrderScreen({ orderId }: { orderId: string }) {
@@ -482,8 +482,8 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
                 <IconCheck className="h-8 w-8" />
               </div>
             </div>
-            <div className="mt-4 text-[24px] font-extrabold leading-tight text-emerald-700">Р—Р°РєР°Р· РґРѕСЃС‚Р°РІР»РµРЅ</div>
-            <div className="mt-1 text-sm font-semibold text-emerald-700/75">РџСЂРёСЏС‚РЅРѕРіРѕ Р°РїРїРµС‚РёС‚Р°!</div>
+            <div className="mt-4 text-[24px] font-extrabold leading-tight text-emerald-700">Заказ доставлен</div>
+            <div className="mt-1 text-sm font-semibold text-emerald-700/75">Приятного аппетита!</div>
 
             <span className="delivered-dot delivered-dot-1" />
             <span className="delivered-dot delivered-dot-2" />
@@ -504,8 +504,8 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
                 <IconCross className="h-8 w-8" />
               </div>
             </div>
-            <div className="mt-4 text-[24px] font-extrabold leading-tight text-rose-700">Р—Р°РєР°Р· РѕС‚РјРµРЅРµРЅ</div>
-            <div className="mt-1 text-sm font-semibold text-rose-700/75">РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РѕС‚РјРµРЅРёР» Р·Р°РєР°Р·</div>
+            <div className="mt-4 text-[24px] font-extrabold leading-tight text-rose-700">Заказ отменен</div>
+            <div className="mt-1 text-sm font-semibold text-rose-700/75">Администратор отменил заказ</div>
 
             <span className="canceled-dot canceled-dot-1" />
             <span className="canceled-dot canceled-dot-2" />
@@ -518,19 +518,19 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
       )}
 
       <div className="mx-auto max-w-md space-y-4">
-        <div className="text-3xl font-extrabold">Р—Р°РєР°Р·</div>
+        <div className="text-3xl font-extrabold">Заказ</div>
 
         {orderLoading && !data ? (
           <Card className="p-4">
-            <div className="text-sm text-black/60">Р—Р°РіСЂСѓР·РєР° Р·Р°РєР°Р·Р°...</div>
+            <div className="text-sm text-black/60">Загрузка заказа...</div>
           </Card>
         ) : hasNoActiveOrder ? (
           <Card className="p-4">
-            <div className="text-sm text-black/60">РђРєС‚РёРІРЅС‹Р№ Р·Р°РєР°Р·</div>
-            <div className="mt-2 text-sm text-black/70">РќРµС‚ Р°РєС‚РёРІРЅС‹С… Р·Р°РєР°Р·РѕРІ.</div>
+            <div className="text-sm text-black/60">Активный заказ</div>
+            <div className="mt-2 text-sm text-black/70">Нет активных заказов.</div>
             <div className="mt-3">
               <Link href={`/r/${menuSlug}`} className="block rounded-xl bg-black py-3 text-center font-semibold text-white">
-                Р’ РјРµРЅСЋ
+                В меню
               </Link>
             </div>
           </Card>
@@ -538,7 +538,7 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
           <>
             <Card className="overflow-hidden p-0">
               <div className="flex items-center justify-between gap-3 border-b border-black/10 bg-white/75 px-4 py-3">
-                <div className="text-sm font-semibold text-black/65">РђРєС‚РёРІРЅС‹Р№ Р·Р°РєР°Р·</div>
+                <div className="text-sm font-semibold text-black/65">Активный заказ</div>
                 <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${statusMeta.badgeClassName}`}>{statusMeta.label}</span>
               </div>
 
@@ -554,26 +554,26 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
 
                 <div className="mt-4 rounded-2xl border border-black/10 bg-white/70 p-3">
                   <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                    <div className="text-black/60">РС‚РѕРіРѕ</div>
+                    <div className="text-black/60">Итого</div>
                     <div className="text-right text-base font-extrabold">{formatKgs(data?.totalKgs ?? 0)}</div>
-                    <div className="text-black/60">РџР»Р°С‚РµР»СЊС‰РёРє</div>
+                    <div className="text-black/60">Плательщик</div>
                     <div className="text-right font-bold break-words">{data?.payerName ?? "-"}</div>
-                    <div className="text-black/60">РЎРїРѕСЃРѕР± РѕРїР»Р°С‚С‹</div>
+                    <div className="text-black/60">Способ оплаты</div>
                     <div className="text-right">{paymentMethodLabel(data?.paymentMethod ?? "")}</div>
-                    <div className="text-black/60">РўРµР»РµС„РѕРЅ</div>
+                    <div className="text-black/60">Телефон</div>
                     <div className="text-right">{data?.customerPhone ?? "-"}</div>
-                    <div className="text-black/60">Р’СЂРµРјСЏ Р·Р°РєР°Р·Р°</div>
+                    <div className="text-black/60">Время заказа</div>
                     <div className="text-right">{data?.createdAt ? new Date(data.createdAt).toLocaleString() : "-"}</div>
-                    <div className="text-black/60">РћР±РЅРѕРІР»РµРЅ</div>
+                    <div className="text-black/60">Обновлен</div>
                     <div className="text-right">{data?.updatedAt ? new Date(data.updatedAt).toLocaleString() : "-"}</div>
                   </div>
                 </div>
 
                 <div className="mt-3 rounded-2xl border border-black/10 bg-white/70 px-3 py-2 text-sm text-black/70">
-                  РџСЂРѕС…РѕРґ <span className="font-bold">{data?.location?.line ?? "-"}</span>, РєРѕРЅС‚РµР№РЅРµСЂ <span className="font-bold">{data?.location?.container ?? "-"}</span>
+                  Проход <span className="font-bold">{data?.location?.line ?? "-"}</span>, контейнер <span className="font-bold">{data?.location?.container ?? "-"}</span>
                   {data?.location?.landmark ? <> ({data.location.landmark})</> : null}
                 </div>
-                {data?.comment ? <div className="mt-2 rounded-2xl border border-black/10 bg-white/70 px-3 py-2 text-sm text-black/60">РљРѕРјРјРµРЅС‚Р°СЂРёР№: {data.comment}</div> : null}
+                {data?.comment ? <div className="mt-2 rounded-2xl border border-black/10 bg-white/70 px-3 py-2 text-sm text-black/60">Комментарий: {data.comment}</div> : null}
               </div>
             </Card>
 
@@ -598,11 +598,11 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
           </>
         ) : (
           <Card className="p-4">
-            <div className="text-sm text-black/60">РђРєС‚РёРІРЅС‹Р№ Р·Р°РєР°Р·</div>
-            <div className="mt-2 text-sm text-black/70">Р­С‚РѕС‚ Р·Р°РєР°Р· Р·Р°РІРµСЂС€РµРЅ Рё РїРµСЂРµРЅРµСЃРµРЅ РІ РёСЃС‚РѕСЂРёСЋ. РћС„РѕСЂРјРёС‚Рµ РЅРѕРІС‹Р№ Р·Р°РєР°Р· РІ РјРµРЅСЋ.</div>
+            <div className="text-sm text-black/60">Активный заказ</div>
+            <div className="mt-2 text-sm text-black/70">Этот заказ завершен и перенесен в историю. Оформите новый заказ в меню.</div>
             <div className="mt-3">
               <Link href={`/r/${menuSlug}`} className="block rounded-xl bg-black py-3 text-center font-semibold text-white">
-                Р’ РјРµРЅСЋ
+                В меню
               </Link>
             </div>
           </Card>
@@ -614,7 +614,7 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-700">
                 <IconHistory className="h-4 w-4" />
               </span>
-              <span className="text-sm font-semibold">РСЃС‚РѕСЂРёСЏ Р·Р°РєР°Р·РѕРІ</span>
+              <span className="text-sm font-semibold">История заказов</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs text-black/45">{history.length}</span>
@@ -624,7 +624,7 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
 
           {historyOpen && (
             <div className="border-t border-black/10 px-4 pb-4 pt-3">
-              <div className="mb-2 text-[11px] text-black/45">РќР°Р¶РјРёС‚Рµ РЅР° Р·Р°РєР°Р·, С‡С‚РѕР±С‹ РїРѕСЃРјРѕС‚СЂРµС‚СЊ РґРµС‚Р°Р»Рё.</div>
+              <div className="mb-2 text-[11px] text-black/45">Нажмите на заказ, чтобы посмотреть детали.</div>
               <div className="space-y-2">
                 {history.map((order) => {
                   const isExpanded = openedHistoryOrderId === order.id;
@@ -642,7 +642,7 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
                           <div className="text-xs text-black/55">{createdDate.toLocaleDateString()}</div>
                           <div className="text-xs text-black/55">{createdDate.toLocaleTimeString()}</div>
                           <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-black/45">
-                            <span>{isExpanded ? "РЎРІРµСЂРЅСѓС‚СЊ" : "РџРѕРґСЂРѕР±РЅРµРµ"}</span>
+                            <span>{isExpanded ? "Свернуть" : "Подробнее"}</span>
                             <IconChevron open={isExpanded} className="h-3.5 w-3.5" />
                           </div>
                         </div>
@@ -651,12 +651,12 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
                       {isExpanded && (
                         <div className="motion-fade-up border-t border-black/10 px-3 pb-3 pt-2">
                           <div className="text-xs text-black/55">
-                            {order.restaurant?.name ?? "-"} В· {paymentMethodLabel(order.paymentMethod)}
+                            {order.restaurant?.name ?? "-"} · {paymentMethodLabel(order.paymentMethod)}
                           </div>
                           <div className="mt-1 text-xs text-black/55">
-                            РџСЂРѕС…РѕРґ {order.location?.line ?? "-"}, РєРѕРЅС‚РµР№РЅРµСЂ {order.location?.container ?? "-"}
+                            Проход {order.location?.line ?? "-"}, контейнер {order.location?.container ?? "-"}
                           </div>
-                          {order.comment ? <div className="mt-1 text-xs text-black/55">РљРѕРјРјРµРЅС‚Р°СЂРёР№: {order.comment}</div> : null}
+                          {order.comment ? <div className="mt-1 text-xs text-black/55">Комментарий: {order.comment}</div> : null}
 
                           <div className="mt-3 space-y-2">
                             {order.items.map((item) => (
@@ -679,7 +679,7 @@ export default function OrderScreen({ orderId }: { orderId: string }) {
                     </div>
                   );
                 })}
-                {history.length === 0 && <div className="text-sm text-black/50">РСЃС‚РѕСЂРёСЏ Р·Р°РєР°Р·РѕРІ РїРѕРєР° РїСѓСЃС‚Р°.</div>}
+                {history.length === 0 && <div className="text-sm text-black/50">История заказов пока пуста.</div>}
               </div>
             </div>
           )}
