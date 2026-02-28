@@ -1,3 +1,4 @@
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       let lastSignature = "";
 
       const pushSnapshot = async () => {
+        await expireStaleOrders();
+
         const order = await prisma.order.findUnique({
           where: { id },
           select: { id: true, status: true, updatedAt: true, paymentConfirmedAt: true, canceledAt: true, deliveredAt: true }

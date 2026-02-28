@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { toApiError } from "@/lib/apiError";
 import { requireAdminRole } from "@/lib/adminAuth";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { toClientPaymentMethod } from "@/lib/paymentMethod";
 import { prisma } from "@/lib/prisma";
 
@@ -11,6 +12,8 @@ export async function GET() {
   if ("response" in auth) return auth.response;
 
   try {
+    await expireStaleOrders();
+
     const orders = await prisma.order.findMany({
       include: { restaurant: true, items: true },
       orderBy: { createdAt: "desc" },
@@ -52,4 +55,3 @@ export async function GET() {
     return NextResponse.json({ error: apiError.message }, { status: apiError.status });
   }
 }
-

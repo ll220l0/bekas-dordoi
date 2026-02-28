@@ -32,3 +32,5 @@ Thumbs.db
 # Runtime uploads
 public/uploads/*
 !public/uploads/.gitkeep
+
+.vercel

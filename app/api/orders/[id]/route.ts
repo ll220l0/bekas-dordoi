@@ -1,5 +1,6 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { toApiError } from "@/lib/apiError";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { toClientPaymentMethod } from "@/lib/paymentMethod";
 import { prisma } from "@/lib/prisma";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await expireStaleOrders();
+
     const { id } = await params;
     const order = await prisma.order.findUnique({
       where: { id },
@@ -51,4 +54,3 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     return NextResponse.json({ error: apiError.message }, { status: apiError.status });
   }
 }
-

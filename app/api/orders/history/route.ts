@@ -1,5 +1,6 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { toApiError } from "@/lib/apiError";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { toClientPaymentMethod } from "@/lib/paymentMethod";
 import { prisma } from "@/lib/prisma";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    await expireStaleOrders();
+
     const url = new URL(req.url);
     const phone = url.searchParams.get("phone")?.trim() ?? "";
     const idsParam = url.searchParams.get("ids")?.trim() ?? "";
@@ -65,4 +68,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: apiError.message }, { status: apiError.status });
   }
 }
-

@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Button, Card, Photo } from "@/components/ui";
 import { ClientNav } from "@/components/ClientNav";
@@ -74,6 +74,7 @@ export default function CartScreen() {
   const [redirectingTo, setRedirectingTo] = useState<"pay" | "order" | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState("");
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -167,6 +168,8 @@ export default function CartScreen() {
       return;
     }
 
+    if (submitLockRef.current || loading) return;
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const payload = {
@@ -220,6 +223,7 @@ export default function CartScreen() {
       toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
+      submitLockRef.current = false;
     }
   }
 
@@ -406,4 +410,5 @@ export default function CartScreen() {
     </main>
   );
 }
+
 

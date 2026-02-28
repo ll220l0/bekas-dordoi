@@ -1,7 +1,10 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  await expireStaleOrders();
+
   const { id } = await params;
 
   const order = await prisma.order.findUnique({ where: { id } });
@@ -26,4 +29,3 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
 
   return NextResponse.json({ ok: true, status: updated.status });
 }
-

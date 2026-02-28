@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { logAdminAction } from "@/lib/auditLog";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { prisma } from "@/lib/prisma";
 
 const CONFIRMED_STATUSES = new Set<string>(["confirmed", "cooking", "delivering", "delivered"]);
@@ -8,6 +9,8 @@ const CONFIRMED_STATUSES = new Set<string>(["confirmed", "cooking", "delivering"
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdminRole(["owner", "operator"]);
   if ("response" in auth) return auth.response;
+
+  await expireStaleOrders();
 
   const { id } = await params;
   const order = await prisma.order.findUnique({ where: { id } });
@@ -43,5 +46,4 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
 
   return NextResponse.json({ ok: true, status: updated.status });
 }
-
 

@@ -1,4 +1,5 @@
 import { requireAdminRole } from "@/lib/adminAuth";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ export async function GET() {
       let lastSignature = "";
 
       const pushMeta = async () => {
+        await expireStaleOrders();
+
         const [latest, total] = await Promise.all([
           prisma.order.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
           prisma.order.count()

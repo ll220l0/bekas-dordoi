@@ -1,5 +1,6 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { toApiError } from "@/lib/apiError";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { prisma } from "@/lib/prisma";
 
 type MarkPaidBody = {
@@ -8,6 +9,8 @@ type MarkPaidBody = {
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await expireStaleOrders();
+
     const { id } = await params;
     const body = (await req.json().catch(() => null)) as MarkPaidBody | null;
     const payerName = body?.payerName?.trim() ?? "";
@@ -34,4 +37,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: apiError.message }, { status: apiError.status });
   }
 }
-

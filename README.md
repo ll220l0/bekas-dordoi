@@ -1,4 +1,4 @@
-﻿# Dordoi Food Web (v3 / 2026-ready)
+# Dordoi Food Web (v3 / 2026-ready)
 
 PWA web-app for market restaurants (container delivery):
 - guest menu
@@ -135,6 +135,12 @@ $env:DATABASE_URL="postgresql://..."; npx prisma migrate deploy
 - `ADMIN_OPERATOR_PASS`
 - `ADMIN_COURIER_USER`
 - `ADMIN_COURIER_PASS`
+- `ORDER_PAYMENT_TIMEOUT_MINUTES` (auto-cancel timeout for unpaid bank orders, default `8`)
+- `ORDER_CREATE_LIMIT_PER_MINUTE` (soft throttle cap, default `20`)
+- `ORDER_CREATE_THROTTLE_DELAY_MS` (soft-throttle delay before recheck, default `450`)
+- `ORDER_DUPLICATE_WINDOW_SECONDS` (server anti-duplicate window, default `90`)
+- `SLO_PAYMENT_CONFIRM_MINUTES` (SLA target for payment confirmation, default `8`)
+- `SLO_DELIVERY_MINUTES` (SLA target for delivery, default `35`)
 
 ### Smoke checks
 ```bash
@@ -142,4 +148,7 @@ npm run smoke
 # optional
 SMOKE_BASE_URL=https://your-domain npm run smoke
 ```
+
+
+
 

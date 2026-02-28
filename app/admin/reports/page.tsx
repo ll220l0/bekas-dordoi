@@ -23,6 +23,24 @@ type ReportResp = {
     totalCanceled: number;
     avgCheckKgs: number;
   };
+  slo: {
+    paymentConfirm: {
+      sampleSize: number;
+      targetMinutes: number;
+      p50Minutes: number;
+      p90Minutes: number;
+      withinTargetPct: number;
+    };
+    delivery: {
+      sampleSize: number;
+      targetMinutes: number;
+      p50Minutes: number;
+      p90Minutes: number;
+      withinTargetPct: number;
+    };
+    cancelRatePct: number;
+    staleAwaitingPayment: number;
+  };
   daily: DailyRow[];
   topItems: Array<{ title: string; qty: number; revenueKgs: number }>;
 };
@@ -199,13 +217,13 @@ function RevenueTrendChart({ rows }: { rows: DailyRow[] }) {
   return (
     <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
       <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
-        <div className="text-sm font-semibold text-black/80">Тренд выручки</div>
-        <div className="hidden text-xs text-black/50 sm:block">Наведите на точку</div>
+        <div className="text-sm font-semibold text-black/80">РўСЂРµРЅРґ РІС‹СЂСѓС‡РєРё</div>
+        <div className="hidden text-xs text-black/50 sm:block">РќР°РІРµРґРёС‚Рµ РЅР° С‚РѕС‡РєСѓ</div>
       </div>
 
       <div className="px-4 pb-4 pt-3">
         {rows.length === 0 ? (
-          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">Нет данных за выбранный период.</div>
+          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">РќРµС‚ РґР°РЅРЅС‹С… Р·Р° РІС‹Р±СЂР°РЅРЅС‹Р№ РїРµСЂРёРѕРґ.</div>
         ) : (
           <>
             <div className="-mx-1 overflow-x-auto px-1">
@@ -261,7 +279,7 @@ function RevenueTrendChart({ rows }: { rows: DailyRow[] }) {
                   <div className="text-base font-extrabold text-black/90">{formatKgs(activePoint.revenueKgs)}</div>
                 </div>
                 <div className="mt-1 text-xs text-black/60">
-                  Заказы: {activePoint.orders} · Доставлено: {activePoint.delivered} · Отменено: {activePoint.canceled} · Средний чек: {formatKgs(activePoint.avgCheckKgs)}
+                  Р—Р°РєР°Р·С‹: {activePoint.orders} В· Р”РѕСЃС‚Р°РІР»РµРЅРѕ: {activePoint.delivered} В· РћС‚РјРµРЅРµРЅРѕ: {activePoint.canceled} В· РЎСЂРµРґРЅРёР№ С‡РµРє: {formatKgs(activePoint.avgCheckKgs)}
                 </div>
               </div>
             ) : null}
@@ -292,7 +310,7 @@ function ConversionDonut({ summary }: { summary: ReportResp["summary"] | null | 
 
   return (
     <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
-      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Конверсия заказов</div>
+      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">РљРѕРЅРІРµСЂСЃРёСЏ Р·Р°РєР°Р·РѕРІ</div>
       <div className="grid gap-3 px-4 pb-4 pt-4 sm:grid-cols-[160px_1fr] sm:items-center">
         <div className="mx-auto">
           <div className="relative h-32 w-32 rounded-full sm:h-[150px] sm:w-[150px]" style={{ background: conicGradient }}>
@@ -306,22 +324,114 @@ function ConversionDonut({ summary }: { summary: ReportResp["summary"] | null | 
 
         <div className="space-y-2">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm">
-            <div className="font-semibold text-emerald-700">Доставлено</div>
+            <div className="font-semibold text-emerald-700">Р”РѕСЃС‚Р°РІР»РµРЅРѕ</div>
             <div className="text-xs text-emerald-700/80">
-              {safeDelivered} заказов · {totalSafe > 0 ? Math.round((safeDelivered / totalSafe) * 100) : 0}%
+              {safeDelivered} Р·Р°РєР°Р·РѕРІ В· {totalSafe > 0 ? Math.round((safeDelivered / totalSafe) * 100) : 0}%
             </div>
           </div>
           <div className="rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2 text-sm">
-            <div className="font-semibold text-sky-700">В работе</div>
+            <div className="font-semibold text-sky-700">Р’ СЂР°Р±РѕС‚Рµ</div>
             <div className="text-xs text-sky-700/80">
-              {safePending} заказов · {totalSafe > 0 ? Math.round((safePending / totalSafe) * 100) : 0}%
+              {safePending} Р·Р°РєР°Р·РѕРІ В· {totalSafe > 0 ? Math.round((safePending / totalSafe) * 100) : 0}%
             </div>
           </div>
           <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm">
-            <div className="font-semibold text-rose-700">Отменено</div>
+            <div className="font-semibold text-rose-700">РћС‚РјРµРЅРµРЅРѕ</div>
             <div className="text-xs text-rose-700/80">
-              {safeCanceled} заказов · {totalSafe > 0 ? Math.round((safeCanceled / totalSafe) * 100) : 0}%
+              {safeCanceled} Р·Р°РєР°Р·РѕРІ В· {totalSafe > 0 ? Math.round((safeCanceled / totalSafe) * 100) : 0}%
             </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function SloGauge({
+  title,
+  value,
+  target,
+  p50,
+  p90,
+  sample,
+  color,
+  tone
+}: {
+  title: string;
+  value: number;
+  target: number;
+  p50: number;
+  p90: number;
+  sample: number;
+  color: string;
+  tone: string;
+}) {
+  const percent = Math.max(0, Math.min(100, value));
+  const gradient = `conic-gradient(from -90deg, ${color} 0% ${percent}%, rgba(148,163,184,0.18) ${percent}% 100%)`;
+
+  return (
+    <div className="rounded-2xl border border-black/10 bg-white/90 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-black/80">{title}</div>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${tone}`}>{value}%</span>
+      </div>
+
+      <div className="mt-3 flex items-center gap-3">
+        <div className="relative h-16 w-16 shrink-0 rounded-full" style={{ background: gradient }}>
+          <div className="absolute inset-[7px] rounded-full bg-white ring-1 ring-black/5" />
+          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-black/75">{value}%</div>
+        </div>
+
+        <div className="min-w-0 flex-1 text-xs text-black/60">
+          <div>Цель: ≤ {target} мин</div>
+          <div className="mt-1">p50: {p50} мин · p90: {p90} мин</div>
+          <div className="mt-1">Выборка: {sample}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SloBoard({ slo }: { slo: ReportResp["slo"] | null | undefined }) {
+  const payment = slo?.paymentConfirm;
+  const delivery = slo?.delivery;
+  const cancelRate = Math.max(0, Math.min(100, slo?.cancelRatePct ?? 0));
+  const stale = Math.max(0, slo?.staleAwaitingPayment ?? 0);
+
+  return (
+    <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
+      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">SLO мониторинг</div>
+      <div className="grid gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-3">
+        <SloGauge
+          title="Подтверждение оплаты"
+          value={payment?.withinTargetPct ?? 0}
+          target={payment?.targetMinutes ?? 0}
+          p50={payment?.p50Minutes ?? 0}
+          p90={payment?.p90Minutes ?? 0}
+          sample={payment?.sampleSize ?? 0}
+          color="#0ea5e9"
+          tone="bg-sky-100 text-sky-700"
+        />
+        <SloGauge
+          title="Доставка"
+          value={delivery?.withinTargetPct ?? 0}
+          target={delivery?.targetMinutes ?? 0}
+          p50={delivery?.p50Minutes ?? 0}
+          p90={delivery?.p90Minutes ?? 0}
+          sample={delivery?.sampleSize ?? 0}
+          color="#10b981"
+          tone="bg-emerald-100 text-emerald-700"
+        />
+
+        <div className="rounded-2xl border border-black/10 bg-white/90 p-3">
+          <div className="text-sm font-semibold text-black/80">Стабильность потока</div>
+          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm">
+            <div className="font-semibold text-rose-700">Доля отмен</div>
+            <div className="text-xs text-rose-700/80">{cancelRate}% от всех заказов периода</div>
+          </div>
+          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm">
+            <div className="font-semibold text-amber-700">Подвисшие оплаты</div>
+            <div className="text-xs text-amber-700/80">{stale} заказ(ов) сейчас ждут оплату дольше лимита</div>
           </div>
         </div>
       </div>
@@ -341,10 +451,10 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
 
   return (
     <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
-      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Топ блюд</div>
+      <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">РўРѕРї Р±Р»СЋРґ</div>
       <div className="px-4 pb-4 pt-3">
         {items.length === 0 ? (
-          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">Пока нет доставленных заказов.</div>
+          <div className="rounded-2xl border border-black/10 bg-white/80 p-4 text-sm text-black/55">РџРѕРєР° РЅРµС‚ РґРѕСЃС‚Р°РІР»РµРЅРЅС‹С… Р·Р°РєР°Р·РѕРІ.</div>
         ) : (
           <div className="space-y-2">
             {items.map((item, idx) => {
@@ -367,7 +477,7 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/5 text-[11px] font-bold text-black/70">{idx + 1}</span>
                       <span className="truncate font-semibold">{item.title}</span>
                     </div>
-                    <div className="shrink-0 text-xs font-semibold text-black/70">{item.qty} шт.</div>
+                    <div className="shrink-0 text-xs font-semibold text-black/70">{item.qty} С€С‚.</div>
                   </div>
                 </button>
               );
@@ -376,7 +486,7 @@ function TopItemsChart({ items }: { items: Array<{ title: string; qty: number; r
             {active ? (
               <div className="mt-2 rounded-2xl border border-black/10 bg-gradient-to-r from-white to-cyan-50/70 p-3 text-sm">
                 <div className="font-semibold text-black/85">{active.title}</div>
-                <div className="mt-1 text-xs text-black/60">Количество: {active.qty} · Выручка: {formatKgs(active.revenueKgs)}</div>
+                <div className="mt-1 text-xs text-black/60">РљРѕР»РёС‡РµСЃС‚РІРѕ: {active.qty} В· Р’С‹СЂСѓС‡РєР°: {formatKgs(active.revenueKgs)}</div>
               </div>
             ) : null}
           </div>
@@ -426,6 +536,7 @@ export default function AdminReportsPage() {
   const summary = report?.summary;
   const daily = report?.daily ?? [];
   const topItems = report?.topItems ?? [];
+  const slo = report?.slo;
 
   const revenueValues = daily.map((row) => row.revenueKgs);
   const ordersValues = daily.map((row) => row.orders);
@@ -438,12 +549,12 @@ export default function AdminReportsPage() {
         <div className="rounded-[24px] border border-white/60 bg-gradient-to-br from-white/95 via-white/88 to-slate-100/70 p-3 shadow-[0_30px_80px_-52px_rgba(15,23,42,0.62)] backdrop-blur sm:rounded-[28px] sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.14em] text-black/45">Админка</div>
-              <div className="mt-1 text-3xl font-extrabold text-black/90">Отчеты</div>
+              <div className="text-xs uppercase tracking-[0.14em] text-black/45">РђРґРјРёРЅРєР°</div>
+              <div className="mt-1 text-3xl font-extrabold text-black/90">РћС‚С‡РµС‚С‹</div>
             </div>
             <div className="flex items-center gap-2">
               <Link className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black/65" href="/admin">
-                Назад
+                РќР°Р·Р°Рґ
               </Link>
               <AdminLogoutButton className="px-3 py-2 text-sm" />
             </div>
@@ -456,14 +567,14 @@ export default function AdminReportsPage() {
                 className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition sm:px-3 sm:py-2 sm:text-sm ${days === value ? "bg-black text-white" : "text-black/70"}`}
                 onClick={() => setDays(value)}
               >
-                {value} дней
+                {value} РґРЅРµР№
               </button>
             ))}
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
-              label="Выручка"
+              label="Р’С‹СЂСѓС‡РєР°"
               value={formatKgs(summary?.totalRevenueKgs ?? 0)}
               values={revenueValues}
               stroke="#0284c7"
@@ -471,7 +582,7 @@ export default function AdminReportsPage() {
               accent="bg-cyan-300/30"
             />
             <KpiCard
-              label="Заказы"
+              label="Р—Р°РєР°Р·С‹"
               value={summary?.totalOrders ?? 0}
               values={ordersValues}
               stroke="#0ea5e9"
@@ -479,7 +590,7 @@ export default function AdminReportsPage() {
               accent="bg-sky-300/30"
             />
             <KpiCard
-              label="Доставлено"
+              label="Р”РѕСЃС‚Р°РІР»РµРЅРѕ"
               value={summary?.totalDelivered ?? 0}
               values={deliveredValues}
               stroke="#10b981"
@@ -487,13 +598,17 @@ export default function AdminReportsPage() {
               accent="bg-emerald-300/30"
             />
             <KpiCard
-              label="Средний чек"
+              label="РЎСЂРµРґРЅРёР№ С‡РµРє"
               value={formatKgs(summary?.avgCheckKgs ?? 0)}
               values={avgCheckValues}
               stroke="#a855f7"
               fill="#c084fc"
               accent="bg-fuchsia-300/30"
             />
+          </div>
+
+          <div className="mt-4">
+            <SloBoard slo={slo} />
           </div>
 
           <div className="mt-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
@@ -505,7 +620,7 @@ export default function AdminReportsPage() {
             <TopItemsChart items={topItems} />
 
             <Card className="overflow-hidden border border-black/10 bg-white/88 p-0 shadow-[0_26px_60px_-36px_rgba(15,23,42,0.5)] backdrop-blur">
-              <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Журнал действий</div>
+              <div className="border-b border-black/10 px-4 py-3 text-sm font-semibold text-black/80">Р–СѓСЂРЅР°Р» РґРµР№СЃС‚РІРёР№</div>
               <div className="max-h-[20rem] overflow-auto px-4 pb-4 pt-3 sm:max-h-[26rem]">
                 <div className="space-y-2">
                   {audit.map((row) => (
@@ -515,13 +630,13 @@ export default function AdminReportsPage() {
                         <div className="text-xs text-black/55">{new Date(row.createdAt).toLocaleString()}</div>
                       </div>
                       <div className="mt-1 text-xs text-black/60">
-                        {row.actor} · {row.actorRole}
-                        {row.orderId ? ` · Заказ #${row.orderId.slice(-6)}` : ""}
+                        {row.actor} В· {row.actorRole}
+                        {row.orderId ? ` В· Р—Р°РєР°Р· #${row.orderId.slice(-6)}` : ""}
                       </div>
                     </div>
                   ))}
 
-                  {!loading && audit.length === 0 ? <div className="rounded-xl border border-black/10 bg-white/80 p-3 text-sm text-black/55">Журнал пока пуст.</div> : null}
+                  {!loading && audit.length === 0 ? <div className="rounded-xl border border-black/10 bg-white/80 p-3 text-sm text-black/55">Р–СѓСЂРЅР°Р» РїРѕРєР° РїСѓСЃС‚.</div> : null}
                 </div>
               </div>
             </Card>
@@ -531,3 +646,10 @@ export default function AdminReportsPage() {
     </main>
   );
 }
+
+
+
+
+
+
+

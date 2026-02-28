@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { logAdminAction } from "@/lib/auditLog";
+import { expireStaleOrders } from "@/lib/orderLifecycle";
 import { prisma } from "@/lib/prisma";
 
 function normalizeReason(value: unknown) {
@@ -11,6 +12,8 @@ function normalizeReason(value: unknown) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdminRole(["owner", "operator"]);
   if ("response" in auth) return auth.response;
+
+  await expireStaleOrders();
 
   const { id } = await params;
   const payload = (await request.json().catch(() => null)) as { reason?: unknown } | null;
@@ -54,4 +57,3 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   return NextResponse.json({ ok: true, status: updated.status, canceledReason: updated.canceledReason });
 }
-
