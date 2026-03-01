@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -431,7 +431,7 @@ export default function AdminStaffPage() {
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center">
           <button className="absolute inset-0 bg-black/35 backdrop-blur-sm" aria-label="Закрыть окно создания сотрудника" onClick={() => setCreateModalOpen(false)} />
 
-          <Card className="motion-pop relative z-10 w-full max-w-3xl border border-white/80 bg-gradient-to-br from-white/95 via-white/90 to-slate-100/75 p-5 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.58)]">
+          <Card className="motion-pop relative z-10 w-full max-w-2xl border border-white/80 bg-gradient-to-br from-white/95 via-white/90 to-slate-100/75 p-5 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.58)]">
             <div className="flex items-start justify-between gap-3 rounded-2xl border border-white/80 bg-white/70 p-3">
               <div>
                 <div className="text-2xl font-black leading-tight text-slate-900">Новый сотрудник</div>
@@ -442,7 +442,7 @@ export default function AdminStaffPage() {
               </button>
             </div>
 
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <input
                 className="rounded-2xl border border-slate-200 bg-white/92 px-4 py-3 text-[16px] text-slate-900 placeholder:text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition focus:border-slate-300 focus:outline-none"
                 placeholder="Логин"
@@ -450,8 +450,10 @@ export default function AdminStaffPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/92 p-2.5 shadow-[0_12px_26px_-18px_rgba(15,23,42,0.45)]">
-                <RoleIcon role={role} />
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/92 p-2 shadow-[0_12px_26px_-18px_rgba(15,23,42,0.45)]">
+                <div className="shrink-0 scale-90">
+                  <RoleIcon role={role} />
+                </div>
                 <SelectField value={role} onChange={(next) => setRole(next as AdminRole)} className="flex-1">
                                     <option value="operator">Оператор</option>
                   <option value="courier">Курьер</option>
@@ -478,33 +480,37 @@ export default function AdminStaffPage() {
                 value={phone}
                 onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
               />
+              <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white/92 p-3">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Пароль</div>
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
+                    onClick={() => setShowPasswords((prev) => !prev)}
+                  >
+                    {showPasswords ? "Скрыть" : "Показать"}
+                  </button>
+                </div>
 
-              <div className="sm:col-span-2 flex justify-end">
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-                  onClick={() => setShowPasswords((prev) => !prev)}
-                >
-                  {showPasswords ? "Скрыть пароли" : "Показать пароли"}
-                </button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[16px] text-slate-900 placeholder:text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition focus:border-slate-300 focus:outline-none"
+                    type={showPasswords ? "text" : "password"}
+                    placeholder="Пароль"
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <input
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[16px] text-slate-900 placeholder:text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition focus:border-slate-300 focus:outline-none"
+                    type={showPasswords ? "text" : "password"}
+                    placeholder="Подтвердите пароль"
+                    autoComplete="new-password"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                  />
+                </div>
               </div>
-
-              <input
-                className="rounded-2xl border border-slate-200 bg-white/92 px-4 py-3 text-[16px] text-slate-900 placeholder:text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition focus:border-slate-300 focus:outline-none"
-                type={showPasswords ? "text" : "password"}
-                placeholder="Пароль"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <input
-                className="rounded-2xl border border-slate-200 bg-white/92 px-4 py-3 text-[16px] text-slate-900 placeholder:text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition focus:border-slate-300 focus:outline-none"
-                type={showPasswords ? "text" : "password"}
-                placeholder="Подтвердите пароль"
-                autoComplete="new-password"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-              />
             </div>
 
             <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -544,7 +550,7 @@ export default function AdminStaffPage() {
               </div>
             </div>
 
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <input
                 className="rounded-2xl border border-slate-200 bg-white/92 px-4 py-3 text-[16px] text-slate-900 placeholder:text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition focus:border-slate-300 focus:outline-none"
                 placeholder="Имя"
