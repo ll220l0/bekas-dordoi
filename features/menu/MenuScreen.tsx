@@ -142,7 +142,7 @@ export default function MenuScreen({ slug }: { slug: string }) {
                     onClick={() => setActiveCat(category.id)}
                     className={`shrink-0 snap-start rounded-full px-4 py-2.5 text-sm font-semibold leading-none transition-all duration-300 ${
                       isActive
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_8px_18px_rgba(249,115,22,0.28)] ring-1 ring-white/30"
+                        ? "bg-slate-900 text-white shadow-[0_6px_14px_rgba(15,23,42,0.2)] ring-1 ring-white/20"
                         : "border border-white/90 bg-white/88 text-slate-600 shadow-[0_2px_8px_rgba(15,23,42,0.06)] hover:bg-white"
                     }`}
                   >
@@ -176,7 +176,7 @@ export default function MenuScreen({ slug }: { slug: string }) {
                         <div className="min-w-0 pr-1 text-lg font-bold leading-snug text-slate-900" style={clamp2Style()}>
                           {item.title}
                         </div>
-                        <div className="shrink-0 rounded-2xl border border-amber-300/70 bg-gradient-to-b from-amber-500 to-orange-500 px-3 py-1.5 text-sm font-extrabold tracking-tight text-white shadow-[0_8px_20px_rgba(245,158,11,0.35)]">
+                        <div className="shrink-0 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-extrabold tracking-tight text-amber-800 shadow-[0_3px_10px_rgba(245,158,11,0.12)]">
                           {formatKgs(item.priceKgs)}
                         </div>
                       </div>
@@ -195,7 +195,7 @@ export default function MenuScreen({ slug }: { slug: string }) {
                         ) : (
                           <Button
                             onClick={() => addToCart(item)}
-                            className="h-10 rounded-full !bg-gradient-to-r !from-amber-500 !to-orange-500 px-5 text-base font-bold text-white shadow-[0_8px_18px_rgba(249,115,22,0.28)] hover:shadow-[0_10px_22px_rgba(245,158,11,0.32)]"
+                            className="h-10 rounded-full px-5 text-base font-bold !bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.2)] hover:shadow-[0_10px_22px_rgba(15,23,42,0.24)]"
                             variant="primary"
                           >
                             + Добавить
