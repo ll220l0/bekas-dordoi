@@ -110,6 +110,36 @@ export default function AdminOrderScreen({ orderId }: { orderId: string }) {
     }
   }
 
+  async function startCooking() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/cooking`, { method: "POST" });
+      const j = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(j?.error ?? "Операция не выполнена");
+      toast.success("Статус: Готовится");
+      void load();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handToCourier() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/delivering`, { method: "POST" });
+      const j = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(j?.error ?? "Операция не выполнена");
+      toast.success("Статус: Передан курьеру");
+      void load();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function deliver() {
     setLoading(true);
     try {
@@ -228,7 +258,17 @@ export default function AdminOrderScreen({ orderId }: { orderId: string }) {
                 Подтвердить оплату
               </Button>
             )}
-            {isApprovedStatus(data?.status ?? "") && data?.status !== "delivered" && canDeliverByRole(role) && (
+            {data?.status === "confirmed" && canConfirmByRole(role) && (
+              <Button disabled={loading} onClick={() => void startCooking()} variant="secondary">
+                Готовится
+              </Button>
+            )}
+            {data?.status === "cooking" && canDeliverByRole(role) && (
+              <Button disabled={loading} onClick={() => void handToCourier()} variant="secondary">
+                Передан курьеру
+              </Button>
+            )}
+            {data?.status === "delivering" && canDeliverByRole(role) && (
               <Button disabled={loading} onClick={() => void deliver()} variant="secondary">
                 Подтвердить доставку
               </Button>

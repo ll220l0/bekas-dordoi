@@ -30,7 +30,7 @@ const STATUS_META: Record<OrderStatusValue, OrderStatusMeta> = {
     badgeClassName: "bg-indigo-100 text-indigo-700 border-indigo-200"
   },
   delivering: {
-    label: "В пути",
+    label: "Передан курьеру",
     badgeClassName: "bg-sky-100 text-sky-700 border-sky-200"
   },
   delivered: {

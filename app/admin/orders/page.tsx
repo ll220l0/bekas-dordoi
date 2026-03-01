@@ -175,6 +175,22 @@ export default function AdminOrdersPage() {
     void load(true);
   }
 
+  async function startCooking(id: string) {
+    const res = await fetch(`/api/admin/orders/${id}/cooking`, { method: "POST" });
+    const j = (await res.json().catch(() => null)) as { error?: string } | null;
+    if (!res.ok) toast.error(j?.error ?? "Ошибка");
+    else toast.success("Статус: Готовится");
+    void load(true);
+  }
+
+  async function handToCourier(id: string) {
+    const res = await fetch(`/api/admin/orders/${id}/delivering`, { method: "POST" });
+    const j = (await res.json().catch(() => null)) as { error?: string } | null;
+    if (!res.ok) toast.error(j?.error ?? "Ошибка");
+    else toast.success("Статус: Передан курьеру");
+    void load(true);
+  }
+
   async function deliver(id: string) {
     const res = await fetch(`/api/admin/orders/${id}/deliver`, { method: "POST" });
     const j = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -294,7 +310,17 @@ export default function AdminOrdersPage() {
                 Подтвердить оплату
               </Button>
             )}
-            {isApprovedStatus(order.status) && order.status !== "delivered" && canDeliverByRole(currentRole) && (
+            {order.status === "confirmed" && canConfirmByRole(currentRole) && (
+              <Button onClick={() => void startCooking(order.id)} variant="secondary" className="h-10 px-4">
+                Готовится
+              </Button>
+            )}
+            {order.status === "cooking" && canDeliverByRole(currentRole) && (
+              <Button onClick={() => void handToCourier(order.id)} variant="secondary" className="h-10 px-4">
+                Передан курьеру
+              </Button>
+            )}
+            {order.status === "delivering" && canDeliverByRole(currentRole) && (
               <Button onClick={() => void deliver(order.id)} variant="secondary" className="h-10 px-4">
                 Подтвердить доставку
               </Button>
