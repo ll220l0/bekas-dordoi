@@ -1,4 +1,4 @@
-п»ї"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -25,7 +25,7 @@ type Item = {
 type AvailabilityFilter = "all" | "available" | "hidden";
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "РћС€РёР±РєР°";
+  return error instanceof Error ? error.message : "Ошибка";
 }
 
 async function resizeImage(file: File) {
@@ -35,7 +35,7 @@ async function resizeImage(file: File) {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new window.Image();
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±СЂР°Р±РѕС‚Р°С‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёРµ"));
+      image.onerror = () => reject(new Error("Не удалось обработать изображение"));
       image.src = url;
     });
 
@@ -44,7 +44,7 @@ async function resizeImage(file: File) {
     canvas.width = target;
     canvas.height = target;
     const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("РҐРѕР»СЃС‚ РЅРµРґРѕСЃС‚СѓРїРµРЅ");
+    if (!ctx) throw new Error("Холст недоступен");
 
     const minSide = Math.min(img.width, img.height);
     const sx = (img.width - minSide) / 2;
@@ -52,7 +52,7 @@ async function resizeImage(file: File) {
     ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, target, target);
 
     const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error("РќРµ СѓРґР°Р»РѕСЃСЊ СЃР¶Р°С‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёРµ"))), "image/webp", 0.9);
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error("Не удалось сжать изображение"))), "image/webp", 0.9);
     });
 
     return new File([blob], `${Date.now()}.webp`, { type: "image/webp" });
@@ -65,7 +65,7 @@ export default function AdminMenuPage() {
   const [restaurantSlug, setRestaurantSlug] = useState<string>("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
-  const [categoriesOpen, setCategoriesOpen] = useState(true);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all");
@@ -164,10 +164,10 @@ export default function AdminMenuPage() {
 
       const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
       const j = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !j.url) throw new Error(j.error ?? "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„РѕС‚Рѕ");
+      if (!res.ok || !j.url) throw new Error(j.error ?? "Не удалось загрузить фото");
 
       setItemPhoto(j.url);
-      toast.success("Р¤РѕС‚Рѕ Р·Р°РіСЂСѓР¶РµРЅРѕ");
+      toast.success("Фото загружено");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -188,8 +188,8 @@ export default function AdminMenuPage() {
         })
       });
       const j = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(j.error ?? "РћС€РёР±РєР°");
-      toast.success("РљР°С‚РµРіРѕСЂРёСЏ СЃРѕР·РґР°РЅР°");
+      if (!res.ok) throw new Error(j.error ?? "Ошибка");
+      toast.success("Категория создана");
       setCatTitle("");
       await loadMenu(restaurantSlug);
     } catch (error: unknown) {
@@ -198,21 +198,21 @@ export default function AdminMenuPage() {
   }
 
   async function deleteCategory(id: string) {
-    if (!confirm("РЈРґР°Р»РёС‚СЊ РєР°С‚РµРіРѕСЂРёСЋ РІРјРµСЃС‚Рµ СЃ Р±Р»СЋРґР°РјРё?")) return;
+    if (!confirm("Удалить категорию вместе с блюдами?")) return;
     const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
     const j = (await res.json()) as { error?: string };
-    if (!res.ok) toast.error(j.error ?? "РћС€РёР±РєР°");
-    else toast.success("РЈРґР°Р»РµРЅРѕ");
+    if (!res.ok) toast.error(j.error ?? "Ошибка");
+    else toast.success("Удалено");
     await loadMenu(restaurantSlug);
   }
 
   async function upsertItem() {
     if (!itemCategoryId) {
-      toast.error("Р’С‹Р±РµСЂРё РєР°С‚РµРіРѕСЂРёСЋ");
+      toast.error("Выбери категорию");
       return;
     }
     if (!itemPrice.trim()) {
-      toast.error("РЈРєР°Р¶РёС‚Рµ С†РµРЅСѓ");
+      toast.error("Укажите цену");
       return;
     }
 
@@ -234,9 +234,9 @@ export default function AdminMenuPage() {
         body: JSON.stringify(payload)
       });
       const j = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(j.error ?? "РћС€РёР±РєР°");
+      if (!res.ok) throw new Error(j.error ?? "Ошибка");
 
-      toast.success(itemId ? "Р‘Р»СЋРґРѕ РѕР±РЅРѕРІР»РµРЅРѕ" : "Р‘Р»СЋРґРѕ СЃРѕР·РґР°РЅРѕ");
+      toast.success(itemId ? "Блюдо обновлено" : "Блюдо создано");
       resetItemForm();
       setItemModalOpen(false);
       await loadMenu(restaurantSlug);
@@ -256,16 +256,16 @@ export default function AdminMenuPage() {
 
     if (!res.ok) {
       setItems((current) => current.map((item) => (item.id === id ? { ...item, isAvailable: !isAvailable } : item)));
-      toast.error("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ РЅР°Р»РёС‡РёРµ");
+      toast.error("Не удалось обновить наличие");
     }
   }
 
   async function deleteItem(id: string) {
-    if (!confirm("РЈРґР°Р»РёС‚СЊ Р±Р»СЋРґРѕ?")) return;
+    if (!confirm("Удалить блюдо?")) return;
     const res = await fetch(`/api/admin/items/${id}`, { method: "DELETE" });
     const j = (await res.json()) as { error?: string };
-    if (!res.ok) toast.error(j.error ?? "РћС€РёР±РєР°");
-    else toast.success("РЈРґР°Р»РµРЅРѕ");
+    if (!res.ok) toast.error(j.error ?? "Ошибка");
+    else toast.success("Удалено");
     await loadMenu(restaurantSlug);
   }
 
@@ -316,11 +316,11 @@ export default function AdminMenuPage() {
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs text-black/50">РђРґРјРёРЅРєР°</div>
-            <div className="text-2xl font-extrabold sm:text-3xl">Р РµРґР°РєС‚РѕСЂ РјРµРЅСЋ</div>
+            <div className="text-xs text-black/50">Админка</div>
+            <div className="text-2xl font-extrabold sm:text-3xl">Редактор меню</div>
           </div>
           <Link className="text-sm text-black/60 underline" href="/admin">
-            РќР°Р·Р°Рґ
+            Назад
           </Link>
         </div>
 
@@ -328,7 +328,7 @@ export default function AdminMenuPage() {
           <Card className="p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Button className="h-10 w-full px-4 sm:w-auto" onClick={openCreateItemModal} disabled={categories.length === 0}>
-                + РќРѕРІРѕРµ Р±Р»СЋРґРѕ
+                + Новое блюдо
               </Button>
               <button
                 type="button"
@@ -336,7 +336,7 @@ export default function AdminMenuPage() {
                 className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-3 text-sm font-semibold text-black/70 transition-[background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-black/5 hover:shadow-[0_8px_18px_rgba(15,23,42,0.08)] sm:w-auto"
                 onClick={() => setCategoriesOpen((prev) => !prev)}
               >
-                РљР°С‚РµРіРѕСЂРёРё
+                Категории
                 <span
                   className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/5 text-black/70 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                     categoriesOpen ? "rotate-180" : "rotate-0"
@@ -348,16 +348,16 @@ export default function AdminMenuPage() {
                 </span>
               </button>
               <div className="flex w-full flex-wrap items-center gap-2 text-xs sm:ml-auto sm:w-auto">
-                <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-black/65">РљР°С‚РµРіРѕСЂРёР№: {categories.length}</span>
-                <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-black/65">Р‘Р»СЋРґ: {items.length}</span>
-                <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-black/65">Р’ РІС‹РґР°С‡Рµ: {filteredItems.length}</span>
+                <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-black/65">Категорий: {categories.length}</span>
+                <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-black/65">Блюд: {items.length}</span>
+                <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-black/65">В выдаче: {filteredItems.length}</span>
               </div>
             </div>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px]">
               <input
                 className="w-full rounded-xl border border-black/10 bg-white px-3 py-3"
-                placeholder="РџРѕРёСЃРє РїРѕ РЅР°Р·РІР°РЅРёСЋ РёР»Рё РѕРїРёСЃР°РЅРёСЋ..."
+                placeholder="Поиск по названию или описанию..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -366,7 +366,7 @@ export default function AdminMenuPage() {
                 value={filterCategoryId}
                 onChange={(e) => setFilterCategoryId(e.target.value)}
               >
-                <option value="all">Р’СЃРµ РєР°С‚РµРіРѕСЂРёРё</option>
+                <option value="all">Все категории</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.title} ({categoryItemCount.get(category.id) ?? 0})
@@ -379,7 +379,7 @@ export default function AdminMenuPage() {
                   onClick={() => setAvailabilityFilter("all")}
                   className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${availabilityFilter === "all" ? "bg-black text-white" : "text-black/65"}`}
                 >
-                  Р’СЃРµ
+                  Все
                 </button>
                 <button
                   type="button"
@@ -388,7 +388,7 @@ export default function AdminMenuPage() {
                     availabilityFilter === "available" ? "bg-emerald-600 text-white" : "text-black/65"
                   } flex-1`}
                 >
-                  Р’ РЅР°Р»РёС‡РёРё
+                  В наличии
                 </button>
                 <button
                   type="button"
@@ -397,7 +397,7 @@ export default function AdminMenuPage() {
                     availabilityFilter === "hidden" ? "bg-rose-600 text-white" : "text-black/65"
                   } flex-1`}
                 >
-                  РЎРєСЂС‹С‚С‹Рµ
+                  Скрытые
                 </button>
               </div>
             </div>
@@ -410,10 +410,10 @@ export default function AdminMenuPage() {
                   <div key={category.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm">
                     <div className="min-w-0 flex items-center gap-2">
                       <span className="break-words font-semibold">{category.title}</span>
-                      <span className="rounded-full bg-black/5 px-2 py-0.5 text-[11px] text-black/60">{categoryItemCount.get(category.id) ?? 0} Р±Р»СЋРґ</span>
+                      <span className="rounded-full bg-black/5 px-2 py-0.5 text-[11px] text-black/60">{categoryItemCount.get(category.id) ?? 0} блюд</span>
                     </div>
                     <button className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700" onClick={() => void deleteCategory(category.id)}>
-                      РЈРґР°Р»РёС‚СЊ
+                      Удалить
                     </button>
                   </div>
                 ))}
@@ -421,12 +421,12 @@ export default function AdminMenuPage() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <input
                   className="min-w-[220px] flex-1 rounded-xl border border-black/10 bg-white px-3 py-3"
-                  placeholder="РќРѕРІР°СЏ РєР°С‚РµРіРѕСЂРёСЏ"
+                  placeholder="Новая категория"
                   value={catTitle}
                   onChange={(e) => setCatTitle(e.target.value)}
                 />
                 <Button className="h-11 w-full px-4 sm:w-auto" onClick={() => void createCategory()} disabled={!catTitle.trim() || !restaurantSlug}>
-                  РЎРѕР·РґР°С‚СЊ РєР°С‚РµРіРѕСЂРёСЋ
+                  Создать категорию
                 </Button>
               </div>
             </Card>
@@ -434,24 +434,24 @@ export default function AdminMenuPage() {
 
           <Card className="p-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-black/50">РџСЂРµРІСЊСЋ РєР»РёРµРЅС‚СЃРєРѕРіРѕ РјРµРЅСЋ</div>
+              <div className="text-sm text-black/50">Превью клиентского меню</div>
               {searchQuery.trim().length > 0 && (
                 <button className="text-xs text-black/55 underline" onClick={() => setSearchQuery("")}>
-                  РћС‡РёСЃС‚РёС‚СЊ РїРѕРёСЃРє
+                  Очистить поиск
                 </button>
               )}
             </div>
             <div className="mt-3 space-y-6">
               {groupedItems.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-black/20 bg-white/70 p-8 text-center text-sm text-black/55">
-                  РџРѕ С‚РµРєСѓС‰РёРј С„РёР»СЊС‚СЂР°Рј Р±Р»СЋРґ РЅРµ РЅР°Р№РґРµРЅРѕ.
+                  По текущим фильтрам блюд не найдено.
                 </div>
               ) : (
                 groupedItems.map(({ category, items: categoryItems }) => (
                   <section key={category.id}>
                     <div className="flex items-center justify-between">
                       <div className="text-xl font-bold">{category.title}</div>
-                      <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-xs font-semibold text-black/60">{categoryItems.length} С€С‚.</span>
+                      <span className="rounded-full border border-black/10 bg-white px-2 py-1 text-xs font-semibold text-black/60">{categoryItems.length} шт.</span>
                     </div>
                     <div className="mt-3 space-y-3">
                       {categoryItems.map((item) => (
@@ -469,7 +469,7 @@ export default function AdminMenuPage() {
 
                               <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <label className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-2 py-1.5 text-sm">
-                                  <span className="text-black/60">РќР°Р»РёС‡РёРµ</span>
+                                  <span className="text-black/60">Наличие</span>
                                   <button
                                     type="button"
                                     role="switch"
@@ -484,7 +484,7 @@ export default function AdminMenuPage() {
                                     />
                                   </button>
                                   <span className={`font-semibold ${item.isAvailable ? "text-emerald-700" : "text-rose-700"}`}>
-                                    {item.isAvailable ? "Р’ РЅР°Р»РёС‡РёРё" : "РЎРєСЂС‹С‚Рѕ"}
+                                    {item.isAvailable ? "В наличии" : "Скрыто"}
                                   </span>
                                 </label>
 
@@ -493,13 +493,13 @@ export default function AdminMenuPage() {
                                     className="rounded-xl border border-black/10 bg-white px-3 py-1.5 text-sm font-semibold text-black/75 transition hover:bg-black/5"
                                     onClick={() => editItem(item)}
                                   >
-                                    Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ
+                                    Редактировать
                                   </button>
                                   <button
                                     className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                                     onClick={() => void deleteItem(item.id)}
                                   >
-                                    РЈРґР°Р»РёС‚СЊ
+                                    Удалить
                                   </button>
                                 </div>
                               </div>
@@ -518,22 +518,22 @@ export default function AdminMenuPage() {
 
       {itemModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center">
-          <button className="absolute inset-0 bg-black/30 backdrop-blur-sm" aria-label="Р—Р°РєСЂС‹С‚СЊ РѕРєРЅРѕ Р±Р»СЋРґР°" onClick={closeItemModal} />
+          <button className="absolute inset-0 bg-black/30 backdrop-blur-sm" aria-label="Закрыть окно блюда" onClick={closeItemModal} />
 
           <Card className="motion-pop relative z-10 w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-lg font-extrabold">{itemId ? "Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ Р±Р»СЋРґР°" : "РќРѕРІРѕРµ Р±Р»СЋРґРѕ"}</div>
-                <div className="mt-1 text-xs text-black/55">Р—Р°РїРѕР»РЅРёС‚Рµ РїРѕР»СЏ Рё СЃСЂР°Р·Сѓ РїСЂРѕРІРµСЂСЊС‚Рµ РїСЂРµРґРїСЂРѕСЃРјРѕС‚СЂ СЃРїСЂР°РІР°.</div>
+                <div className="text-lg font-extrabold">{itemId ? "Редактирование блюда" : "Новое блюдо"}</div>
+                <div className="mt-1 text-xs text-black/55">Заполните поля и сразу проверьте предпросмотр справа.</div>
               </div>
               <div className="flex w-full items-center gap-2 sm:w-auto">
                 {itemId && (
                   <button className="flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-black/70 sm:flex-none" onClick={resetItemForm}>
-                    РЎР±СЂРѕСЃ
+                    Сброс
                   </button>
                 )}
                 <button className="flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-black/70 sm:flex-none" onClick={closeItemModal}>
-                  Р—Р°РєСЂС‹С‚СЊ
+                  Закрыть
                 </button>
               </div>
             </div>
@@ -553,13 +553,13 @@ export default function AdminMenuPage() {
                 </select>
                 <input
                   className="w-full rounded-xl border border-black/10 bg-white px-3 py-3"
-                  placeholder="РќР°Р·РІР°РЅРёРµ Р±Р»СЋРґР°"
+                  placeholder="Название блюда"
                   value={itemTitle}
                   onChange={(e) => setItemTitle(e.target.value)}
                 />
                 <input
                   className="w-full rounded-xl border border-black/10 bg-white px-3 py-3"
-                  placeholder="РћРїРёСЃР°РЅРёРµ"
+                  placeholder="Описание"
                   value={itemDesc}
                   onChange={(e) => setItemDesc(e.target.value)}
                 />
@@ -568,14 +568,14 @@ export default function AdminMenuPage() {
                     className="w-full rounded-xl border border-black/10 bg-white px-3 py-3"
                     type="text"
                     inputMode="numeric"
-                    placeholder="С†РµРЅР°"
+                    placeholder="цена"
                     value={itemPrice}
                     onChange={(e) => setItemPrice(e.target.value.replace(/[^\d]/g, ""))}
                   />
-                  <div className="shrink-0 rounded-xl border border-black/10 bg-white px-3 py-3 text-sm font-semibold text-black/70">СЃРѕРј</div>
+                  <div className="shrink-0 rounded-xl border border-black/10 bg-white px-3 py-3 text-sm font-semibold text-black/70">сом</div>
                 </div>
                 <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-white/80 bg-gradient-to-b from-white to-slate-50 p-3 text-sm shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition hover:shadow-[0_14px_28px_rgba(15,23,42,0.14)]">
-                  <span className="inline-flex items-center rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">+ Р¤РѕС‚Рѕ</span>
+                  <span className="inline-flex items-center rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">+ Фото</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -587,7 +587,7 @@ export default function AdminMenuPage() {
                   />
                 </label>
                 <label className="inline-flex w-fit items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm">
-                  <span className="text-black/60">РќР°Р»РёС‡РёРµ</span>
+                  <span className="text-black/60">Наличие</span>
                   <button
                     type="button"
                     role="switch"
@@ -597,25 +597,25 @@ export default function AdminMenuPage() {
                   >
                     <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition ${itemAvail ? "left-[1.35rem]" : "left-0.5"}`} />
                   </button>
-                  <span className={`font-semibold ${itemAvail ? "text-emerald-700" : "text-rose-700"}`}>{itemAvail ? "Р’ РЅР°Р»РёС‡РёРё" : "РЎРєСЂС‹С‚Рѕ"}</span>
+                  <span className={`font-semibold ${itemAvail ? "text-emerald-700" : "text-rose-700"}`}>{itemAvail ? "В наличии" : "Скрыто"}</span>
                 </label>
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-black/50">РџСЂРµРґРїСЂРѕСЃРјРѕС‚СЂ</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-black/50">Предпросмотр</div>
                 <div className="rounded-2xl border border-black/10 bg-white p-3">
                   {itemPhoto ? (
                     <div className="relative h-36 overflow-hidden rounded-xl border border-black/10 bg-black/5">
-                      <Image src={itemPhoto} alt="РџСЂРµРґРїСЂРѕСЃРјРѕС‚СЂ" fill className="object-cover" sizes="240px" />
+                      <Image src={itemPhoto} alt="Предпросмотр" fill className="object-cover" sizes="240px" />
                     </div>
                   ) : (
                     <div className="flex h-36 items-center justify-center rounded-xl border border-dashed border-black/20 bg-black/5 text-xs text-black/45">
-                      Р¤РѕС‚Рѕ РЅРµ РІС‹Р±СЂР°РЅРѕ
+                      Фото не выбрано
                     </div>
                   )}
                   <div className="mt-2">
-                    <div className="text-sm font-semibold break-words">{itemTitle || "РќР°Р·РІР°РЅРёРµ Р±Р»СЋРґР°"}</div>
-                    <div className="mt-1 text-xs text-black/55 break-words">{itemDesc || "РљРѕСЂРѕС‚РєРѕРµ РѕРїРёСЃР°РЅРёРµ Р±Р»СЋРґР°"}</div>
+                    <div className="text-sm font-semibold break-words">{itemTitle || "Название блюда"}</div>
+                    <div className="mt-1 text-xs text-black/55 break-words">{itemDesc || "Короткое описание блюда"}</div>
                     <div className="mt-2 text-sm font-extrabold">{formatKgs(Number(itemPrice) || 0)}</div>
                   </div>
                 </div>
@@ -624,14 +624,14 @@ export default function AdminMenuPage() {
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Button className="flex-1" variant="secondary" onClick={closeItemModal} disabled={uploadingPhoto}>
-                РћС‚РјРµРЅР°
+                Отмена
               </Button>
               <Button
                 className="flex-1"
                 disabled={!restaurantSlug || !itemCategoryId || !itemTitle.trim() || !itemPhoto || !itemPrice.trim() || uploadingPhoto}
                 onClick={() => void upsertItem()}
               >
-                {uploadingPhoto ? "Р—Р°РіСЂСѓР¶Р°РµРј С„РѕС‚Рѕ..." : itemId ? "РЎРѕС…СЂР°РЅРёС‚СЊ Р±Р»СЋРґРѕ" : "РЎРѕР·РґР°С‚СЊ Р±Р»СЋРґРѕ"}
+                {uploadingPhoto ? "Загружаем фото..." : itemId ? "Сохранить блюдо" : "Создать блюдо"}
               </Button>
             </div>
           </Card>
