@@ -37,7 +37,7 @@ type OrderResp = {
 const CONFIRMED_STATUSES = new Set<OrderResp["status"]>(["confirmed", "cooking", "delivering", "delivered"]);
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Ошибка";
+  return error instanceof Error ? error.message : "Error";
 }
 
 function getEffectiveTotalKgs(order: OrderResp | null, fallbackTotalKgs = 0) {
@@ -256,9 +256,27 @@ export default function PayScreen({ orderId }: { orderId: string }) {
     }, 120);
   }
 
+  function submitFreedomPayForm(actionUrl: string, fields: Record<string, string>) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = actionUrl;
+    form.style.display = "none";
+
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+
   async function goToBankPayment() {
     if (!data || effectiveTotalKgs <= 0) {
-      toast.error("Сумма заказа еще загружается");
+      toast.error("Order total is still loading");
       return;
     }
 
@@ -273,20 +291,36 @@ export default function PayScreen({ orderId }: { orderId: string }) {
         body: JSON.stringify({ payerName: payer })
       });
 
-      const j = (await res.json().catch(() => null)) as { redirectUrl?: string; error?: string } | null;
+      const j = (await res.json().catch(() => null)) as
+        | {
+            method?: "redirect" | "form";
+            redirectUrl?: string;
+            actionUrl?: string;
+            fields?: Record<string, string>;
+            providerError?: string;
+            error?: string;
+          }
+        | null;
+
       if (res.ok && j?.redirectUrl) {
         if (payer.length >= 2) setSavedPayerName(payer);
         window.location.assign(j.redirectUrl);
         return;
       }
 
+      if (res.ok && j?.method === "form" && j.actionUrl && j.fields && Object.keys(j.fields).length > 0) {
+        if (payer.length >= 2) setSavedPayerName(payer);
+        submitFreedomPayForm(j.actionUrl, j.fields);
+        return;
+      }
+
       if (resolvedBankUrl) {
-        toast.error("Freedom Pay временно недоступен. Открываем оплату Mbank");
+        toast.error("Freedom Pay temporarily unavailable. Opening Mbank payment");
         window.location.assign(resolvedBankUrl);
         return;
       }
 
-      throw new Error(j?.error ?? "Не удалось открыть оплату");
+      throw new Error(j?.error ?? "Failed to open payment");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
     } finally {

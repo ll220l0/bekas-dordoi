@@ -77,34 +77,60 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const pgSig = signFreedomPayParams("init_payment.php", requestParams, config.secretKey);
-    const formData = new URLSearchParams({ ...requestParams, pg_sig: pgSig });
+    const signedParams = { ...requestParams, pg_sig: pgSig };
 
-    const providerRes = await fetch(`${config.apiBase}/init_payment.php`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: formData.toString(),
-      cache: "no-store"
-    });
+    const tryInit = async (baseUrl: string) => {
+      const providerRes = await fetch(`${baseUrl}/init_payment.php`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(signedParams).toString(),
+        cache: "no-store"
+      });
 
-    const raw = await providerRes.text();
-    const payload = parseFreedomPayPayload(raw, providerRes.headers.get("content-type"));
+      const raw = await providerRes.text();
+      const payload = parseFreedomPayPayload(raw, providerRes.headers.get("content-type"));
+      return { providerRes, payload, baseUrl };
+    };
 
-    if (!providerRes.ok) {
-      const providerError = payload.pg_error_description || payload.pg_description || "Freedom Pay временно недоступен";
-      throw new Error(providerError);
+    const currentTry = await tryInit(config.apiBase);
+    if (currentTry.providerRes.ok && currentTry.payload.pg_status === "ok" && currentTry.payload.pg_redirect_url) {
+      return NextResponse.json({
+        ok: true,
+        method: "redirect",
+        redirectUrl: currentTry.payload.pg_redirect_url
+      });
     }
 
-    if (payload.pg_status !== "ok" || !payload.pg_redirect_url) {
-      const providerError = payload.pg_error_description || payload.pg_description || "Не удалось открыть оплату Freedom Pay";
-      throw new Error(providerError);
+    const alternateBase =
+      config.apiBase === "https://api.freedompay.kg"
+        ? "https://api.freedompay.kz"
+        : config.apiBase === "https://api.freedompay.kz"
+          ? "https://api.freedompay.kg"
+          : "";
+
+    if (alternateBase) {
+      const altTry = await tryInit(alternateBase);
+      if (altTry.providerRes.ok && altTry.payload.pg_status === "ok" && altTry.payload.pg_redirect_url) {
+        return NextResponse.json({
+          ok: true,
+          method: "redirect",
+          redirectUrl: altTry.payload.pg_redirect_url
+        });
+      }
     }
+
+    const providerError =
+      currentTry.payload.pg_error_description || currentTry.payload.pg_description || "Failed to open Freedom Pay payment";
 
     return NextResponse.json({
       ok: true,
-      redirectUrl: payload.pg_redirect_url
+      method: "form",
+      actionUrl: `${config.apiBase}/init_payment.php`,
+      fields: signedParams,
+      providerError
     });
   } catch (error: unknown) {
-    const apiError = toApiError(error, "Не удалось инициализировать платеж Freedom Pay");
+    const apiError = toApiError(error, "Failed to initialize Freedom Pay payment");
     return NextResponse.json({ error: apiError.message }, { status: apiError.status });
   }
 }
