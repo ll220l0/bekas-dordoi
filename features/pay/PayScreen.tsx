@@ -77,13 +77,13 @@ function IconCross({ className = "h-5 w-5" }: { className?: string }) {
 export default function PayScreen({ orderId }: { orderId: string }) {
   const [data, setData] = useState<OrderResp | null>(null);
   const [loading, setLoading] = useState(false);
-  const [gatewayLoading, setGatewayLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [navigatingToOrder, setNavigatingToOrder] = useState(false);
   const [payerName, setPayerName] = useState("");
   const [waitingForAdmin, setWaitingForAdmin] = useState(false);
   const [showApprovedCheck, setShowApprovedCheck] = useState(false);
   const [showAdminCanceledFx, setShowAdminCanceledFx] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const prevStatusRef = useRef<OrderResp["status"] | null>(null);
   const cancelInitiatedByClientRef = useRef(false);
   const router = useRouter();
@@ -256,78 +256,6 @@ export default function PayScreen({ orderId }: { orderId: string }) {
     }, 120);
   }
 
-  function submitFreedomPayForm(actionUrl: string, fields: Record<string, string>) {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = actionUrl;
-    form.style.display = "none";
-
-    for (const [name, value] of Object.entries(fields)) {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = value;
-      form.appendChild(input);
-    }
-
-    document.body.appendChild(form);
-    form.submit();
-  }
-
-  async function goToBankPayment() {
-    if (!data || effectiveTotalKgs <= 0) {
-      toast.error("Order total is still loading");
-      return;
-    }
-
-    if (gatewayLoading) return;
-
-    setGatewayLoading(true);
-    try {
-      const payer = payerName.trim();
-      const res = await fetch(`/api/orders/${orderId}/freedompay/init`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ payerName: payer })
-      });
-
-      const j = (await res.json().catch(() => null)) as
-        | {
-            method?: "redirect" | "form";
-            redirectUrl?: string;
-            actionUrl?: string;
-            fields?: Record<string, string>;
-            providerError?: string;
-            error?: string;
-          }
-        | null;
-
-      if (res.ok && j?.redirectUrl) {
-        if (payer.length >= 2) setSavedPayerName(payer);
-        window.location.assign(j.redirectUrl);
-        return;
-      }
-
-      if (res.ok && j?.method === "form" && j.actionUrl && j.fields && Object.keys(j.fields).length > 0) {
-        if (payer.length >= 2) setSavedPayerName(payer);
-        submitFreedomPayForm(j.actionUrl, j.fields);
-        return;
-      }
-
-      if (resolvedBankUrl) {
-        toast.error("Freedom Pay temporarily unavailable. Opening Mbank payment");
-        window.location.assign(resolvedBankUrl);
-        return;
-      }
-
-      throw new Error(j?.error ?? "Failed to open payment");
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setGatewayLoading(false);
-    }
-  }
-
   async function markPaid() {
     const payer = payerName.trim();
     if (payer.length < 2) {
@@ -403,26 +331,24 @@ export default function PayScreen({ orderId }: { orderId: string }) {
               onChange={(e) => setPayerName(e.target.value)}
             />
 
-            <div className="mt-3 text-xs text-black/55">Платежная система: Freedom Pay</div>
-
             <div className="mt-4 space-y-2">
-              <Button
-                variant="ghost"
-                onClick={() => void goToBankPayment()}
-                disabled={!data || effectiveTotalKgs <= 0 || cancelling || gatewayLoading}
-                className="h-12 w-full border border-white/50 bg-gradient-to-r from-[#05A6B9] via-[#17C6C6] to-[#62E6CC] py-0 text-white shadow-[0_12px_28px_rgba(5,166,185,0.38)]"
-                aria-label="Перейти к оплате"
-              >
-                {gatewayLoading ? (
-                  <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
-                ) : (
-                  <span className="text-base font-extrabold tracking-wide text-white">К оплате</span>
-                )}
-              </Button>
-              <Button onClick={() => void markPaid()} disabled={loading || cancelling || gatewayLoading} className="h-12 w-full py-0">
+              {resolvedBankUrl ? (
+                <a
+                  href={resolvedBankUrl}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-600 text-base font-extrabold tracking-wide text-white shadow-[0_12px_28px_rgba(5,150,105,0.35)] transition hover:bg-emerald-700"
+                  aria-label="Перейти к оплате в банк"
+                >
+                  Оплатить в банк
+                </a>
+              ) : (
+                <Button disabled className="h-12 w-full py-0 opacity-50">
+                  Банк не настроен
+                </Button>
+              )}
+              <Button onClick={() => void markPaid()} disabled={loading || cancelling} className="h-12 w-full py-0">
                 {loading ? "Отправляем..." : "Я оплатил(а)"}
               </Button>
-              <Button variant="secondary" onClick={() => void cancelOrder()} disabled={loading || cancelling || gatewayLoading} className="h-12 w-full py-0 text-rose-700">
+              <Button variant="secondary" onClick={() => setShowCancelConfirm(true)} disabled={loading || cancelling} className="h-12 w-full py-0 text-rose-700">
                 {cancelling ? "Отменяем..." : "Отменить заказ"}
               </Button>
             </div>
@@ -491,6 +417,30 @@ export default function PayScreen({ orderId }: { orderId: string }) {
             <span className="canceled-dot canceled-dot-4" />
             <span className="canceled-dot canceled-dot-5" />
             <span className="canceled-dot canceled-dot-6" />
+          </div>
+        </div>
+      )}
+
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <button className="absolute inset-0 bg-black/40 backdrop-blur-sm" aria-label="Закрыть" onClick={() => setShowCancelConfirm(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
+            <div className="text-lg font-bold">Отменить заказ?</div>
+            <div className="mt-1 text-sm text-black/60">Это действие нельзя отменить. Заказ будет удалён.</div>
+            <div className="mt-5 flex gap-3">
+              <Button variant="secondary" className="flex-1 h-11 py-0" onClick={() => setShowCancelConfirm(false)}>
+                Назад
+              </Button>
+              <Button
+                className="flex-1 h-11 py-0 bg-rose-600 hover:bg-rose-700 text-white"
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  void cancelOrder();
+                }}
+              >
+                Да, отменить
+              </Button>
+            </div>
           </div>
         </div>
       )}

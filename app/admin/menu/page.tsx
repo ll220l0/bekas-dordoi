@@ -80,6 +80,11 @@ export default function AdminMenuPage() {
   const [itemPrice, setItemPrice] = useState("");
   const [itemAvail, setItemAvail] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; message: string; onConfirm: () => void }>({
+    open: false,
+    message: "",
+    onConfirm: () => {}
+  });
 
   const loadRestaurants = useCallback(async () => {
     const res = await fetch("/api/admin/restaurants", { cache: "no-store" });
@@ -197,13 +202,20 @@ export default function AdminMenuPage() {
     }
   }
 
-  async function deleteCategory(id: string) {
-    if (!confirm("Удалить категорию вместе с блюдами?")) return;
-    const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
-    const j = (await res.json()) as { error?: string };
-    if (!res.ok) toast.error(j.error ?? "Ошибка");
-    else toast.success("Удалено");
-    await loadMenu(restaurantSlug);
+  function deleteCategory(id: string) {
+    const cat = categories.find((c) => c.id === id);
+    const count = categoryItemCount.get(id) ?? 0;
+    setConfirmDialog({
+      open: true,
+      message: `Удалить категорию "${cat?.title ?? ""}" вместе с ${count} блюд${count === 1 ? "ом" : count < 5 ? "ами" : "ами"}?`,
+      onConfirm: async () => {
+        const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+        const j = (await res.json()) as { error?: string };
+        if (!res.ok) toast.error(j.error ?? "Ошибка");
+        else toast.success("Удалено");
+        await loadMenu(restaurantSlug);
+      }
+    });
   }
 
   async function upsertItem() {
@@ -260,13 +272,19 @@ export default function AdminMenuPage() {
     }
   }
 
-  async function deleteItem(id: string) {
-    if (!confirm("Удалить блюдо?")) return;
-    const res = await fetch(`/api/admin/items/${id}`, { method: "DELETE" });
-    const j = (await res.json()) as { error?: string };
-    if (!res.ok) toast.error(j.error ?? "Ошибка");
-    else toast.success("Удалено");
-    await loadMenu(restaurantSlug);
+  function deleteItem(id: string) {
+    const item = items.find((x) => x.id === id);
+    setConfirmDialog({
+      open: true,
+      message: `Удалить блюдо "${item?.title ?? ""}"?`,
+      onConfirm: async () => {
+        const res = await fetch(`/api/admin/items/${id}`, { method: "DELETE" });
+        const j = (await res.json()) as { error?: string };
+        if (!res.ok) toast.error(j.error ?? "Ошибка");
+        else toast.success("Удалено");
+        await loadMenu(restaurantSlug);
+      }
+    });
   }
 
   function editItem(item: Item) {
@@ -635,6 +653,30 @@ export default function AdminMenuPage() {
               </Button>
             </div>
           </Card>
+        </div>
+      )}
+
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <button className="absolute inset-0 bg-black/40 backdrop-blur-sm" aria-label="Закрыть" onClick={() => setConfirmDialog((prev) => ({ ...prev, open: false }))} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
+            <div className="text-lg font-bold">Подтвердите удаление</div>
+            <div className="mt-2 text-sm text-black/65">{confirmDialog.message}</div>
+            <div className="mt-5 flex gap-3">
+              <Button variant="secondary" className="flex-1 h-11 py-0" onClick={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}>
+                Отмена
+              </Button>
+              <Button
+                className="flex-1 h-11 py-0 bg-rose-600 hover:bg-rose-700 text-white"
+                onClick={() => {
+                  setConfirmDialog((prev) => ({ ...prev, open: false }));
+                  void confirmDialog.onConfirm();
+                }}
+              >
+                Удалить
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </main>

@@ -101,6 +101,10 @@ model Order {
   items      OrderItem[]
   pushSubs   PushSubscription[]
   auditLogs  AdminAuditLog[]
+
+  @@index([restaurantId, createdAt])
+  @@index([status, createdAt])
+  @@index([customerPhone])
 }
 
 model OrderItem {
