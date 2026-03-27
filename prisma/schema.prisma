@@ -41,6 +41,9 @@ model MenuItem {
   restaurantId String
   categoryId   String
   title        String
+  variantGroupId    String?
+  variantGroupTitle String?
+  variantLabel      String?
   description  String?
   photoUrl     String
   priceKgs     Int
@@ -53,6 +56,7 @@ model MenuItem {
   orderItems OrderItem[]
 
   @@index([restaurantId, categoryId, sortOrder])
+  @@index([variantGroupId])
 }
 
 enum OrderStatus {
@@ -179,4 +183,3 @@ model AdminAuditLog {
   @@index([orderId])
   @@index([createdAt])
 }
-
