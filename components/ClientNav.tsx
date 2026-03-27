@@ -205,10 +205,10 @@ export function ClientNav({ menuHref, orderHref }: Props) {
   return (
     <nav
       aria-label="Основная навигация"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200/80 bg-white/95 backdrop-blur-lg"
     >
-      <div className="pointer-events-auto mx-auto max-w-md">
-        <div className="grid grid-cols-3 items-center rounded-[22px] border border-gray-200/80 bg-white/95 p-2 shadow-elevated backdrop-blur-lg">
+      <div className="mx-auto max-w-md px-4 pb-[env(safe-area-inset-bottom)] pt-2">
+        <div className="grid grid-cols-3 items-center">
           <Link
             href={menuHref}
             aria-current={isMenu ? "page" : undefined}

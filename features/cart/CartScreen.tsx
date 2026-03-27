@@ -355,13 +355,10 @@ export default function CartScreen() {
                 Проверьте состав заказа и адрес доставки.
               </p>
             </div>
-            <div className="flex items-center gap-2 pb-1">
-              <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-600">
-                {count} шт
-              </span>
+            <div className="pb-1">
               <Link
                 href={menuHref}
-                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-500 hover:text-gray-900 transition"
+                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-500 transition hover:text-gray-900"
               >
                 В меню
               </Link>

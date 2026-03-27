@@ -194,6 +194,8 @@ export default function MenuScreen({ slug }: { slug: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const catBarRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef(new Map<string, HTMLElement>());
+  const isProgrammaticScrollRef = useRef(false);
   const [scrolled, setScrolled] = useState(false);
 
   const setRestaurant = useCart((state) => state.setRestaurant);
@@ -203,11 +205,6 @@ export default function MenuScreen({ slug }: { slug: string }) {
   const lines = useCart((state) => state.lines);
 
   const effectiveSlug = data?.restaurant?.slug ?? slug;
-  const cartCount = useMemo(() => lines.reduce((sum, line) => sum + line.qty, 0), [lines]);
-  const cartTotal = useMemo(
-    () => lines.reduce((sum, line) => sum + line.qty * line.priceKgs, 0),
-    [lines],
-  );
 
   useEffect(() => {
     setRestaurant(effectiveSlug);
@@ -235,18 +232,72 @@ export default function MenuScreen({ slug }: { slug: string }) {
     return map;
   }, [lines]);
 
-  const items = useMemo(() => {
+  const groupedItems = useMemo(() => {
     if (!data) return [];
     const query = searchQuery.trim().toLowerCase();
-    if (query) {
-      return data.items.filter(
-        (item) =>
-          item.title.toLowerCase().includes(query) ||
-          (item.description ?? "").toLowerCase().includes(query),
-      );
+    const filteredItems = query
+      ? data.items.filter(
+          (item) =>
+            item.title.toLowerCase().includes(query) ||
+            (item.description ?? "").toLowerCase().includes(query),
+        )
+      : data.items;
+
+    return data.categories
+      .map((category) => ({
+        category,
+        items: filteredItems.filter((item) => item.categoryId === category.id),
+      }))
+      .filter((entry) => entry.items.length > 0);
+  }, [data, searchQuery]);
+
+  useEffect(() => {
+    if (!groupedItems.length) {
+      setActiveCat(null);
+      return;
     }
-    return activeCat ? data.items.filter((item) => item.categoryId === activeCat) : data.items;
-  }, [data, activeCat, searchQuery]);
+
+    if (!activeCat || !groupedItems.some((entry) => entry.category.id === activeCat)) {
+      setActiveCat(groupedItems[0]?.category.id ?? null);
+    }
+  }, [activeCat, groupedItems]);
+
+  function scrollCategoryChipIntoView(id: string) {
+    const bar = catBarRef.current;
+    if (!bar) return;
+    const button = bar.querySelector<HTMLElement>(`[data-catid="${id}"]`);
+    if (button) {
+      button.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }
+
+  useEffect(() => {
+    if (searchQuery || groupedItems.length === 0) return;
+
+    const handleSectionTracking = () => {
+      if (isProgrammaticScrollRef.current) return;
+
+      let nextActive = groupedItems[0]?.category.id ?? null;
+      for (const entry of groupedItems) {
+        const section = sectionRefs.current.get(entry.category.id);
+        if (!section) continue;
+        if (section.getBoundingClientRect().top <= 180) {
+          nextActive = entry.category.id;
+        } else {
+          break;
+        }
+      }
+
+      if (nextActive && nextActive !== activeCat) {
+        setActiveCat(nextActive);
+        scrollCategoryChipIntoView(nextActive);
+      }
+    };
+
+    handleSectionTracking();
+    window.addEventListener("scroll", handleSectionTracking, { passive: true });
+    return () => window.removeEventListener("scroll", handleSectionTracking);
+  }, [activeCat, groupedItems, searchQuery]);
 
   function addToCart(item: MenuItem) {
     add({
@@ -260,10 +311,19 @@ export default function MenuScreen({ slug }: { slug: string }) {
   function handleCatClick(id: string) {
     setActiveCat(id);
     setSearchQuery("");
-    const bar = catBarRef.current;
-    if (!bar) return;
-    const button = bar.querySelector<HTMLElement>(`[data-catid="${id}"]`);
-    if (button) button.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    scrollCategoryChipIntoView(id);
+
+    const section = sectionRefs.current.get(id);
+    if (!section) return;
+
+    isProgrammaticScrollRef.current = true;
+    window.scrollTo({
+      top: section.getBoundingClientRect().top + window.scrollY - 140,
+      behavior: "smooth",
+    });
+    window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 500);
   }
 
   return (
@@ -372,7 +432,7 @@ export default function MenuScreen({ slug }: { slug: string }) {
         </div>
 
         {/* Food items list */}
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-6">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, index) => (
               <SkeletonItem key={index} delay={index * 60} />
@@ -385,7 +445,7 @@ export default function MenuScreen({ slug }: { slug: string }) {
                 Проверьте соединение и обновите страницу
               </div>
             </div>
-          ) : items.length === 0 ? (
+          ) : groupedItems.length === 0 ? (
             <div className="mt-8 rounded-2xl bg-white px-6 py-10 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06),0_6px_16px_rgba(0,0,0,0.04)]">
               <div className="text-4xl text-gray-400">{searchQuery ? "?" : ":)"}</div>
               <div className="mt-3 text-sm font-semibold text-gray-500">
@@ -395,106 +455,110 @@ export default function MenuScreen({ slug }: { slug: string }) {
               </div>
             </div>
           ) : (
-            items.map((item, index) => {
-              const qty = qtyMap.get(item.id) ?? 0;
-              return (
-                <div
-                  key={item.id}
-                  className="motion-fade-up flex gap-4 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_6px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 hover:-translate-y-0.5"
-                  style={{ animationDelay: `${Math.min(index * 45, 280)}ms` }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedItem(item)}
-                    className="shrink-0 focus:outline-none"
-                    aria-label={`Подробнее: ${item.title}`}
-                  >
-                    <div className="relative h-[100px] w-[100px] overflow-hidden rounded-xl bg-gray-100 transition-transform duration-200 active:scale-95">
-                      <Image
-                        src={item.photoUrl}
-                        alt={item.title}
-                        fill
-                        className="object-cover"
-                        sizes="100px"
-                      />
-                      {!item.isAvailable && (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur">
-                          <span className="px-2 text-center text-[10px] font-bold leading-tight text-gray-500">
-                            НЕТ В НАЛИЧИИ
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </button>
+            groupedItems.map(({ category, items }, categoryIndex) => (
+              <section
+                key={category.id}
+                ref={(node) => {
+                  if (node) sectionRefs.current.set(category.id, node);
+                  else sectionRefs.current.delete(category.id);
+                }}
+                className="scroll-mt-36"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900">{category.title}</h2>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-500 shadow-soft">
+                    {items.length}
+                  </span>
+                </div>
 
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedItem(item)}
-                      className="min-w-0 text-left focus:outline-none"
-                    >
+                <div className="space-y-3">
+                  {items.map((item, itemIndex) => {
+                    const qty = qtyMap.get(item.id) ?? 0;
+                    const animationIndex = categoryIndex * 3 + itemIndex;
+
+                    return (
                       <div
-                        className="text-[15px] font-bold leading-snug text-gray-900"
-                        style={{ ...clamp2(), WebkitLineClamp: 1 }}
+                        key={item.id}
+                        className="motion-fade-up flex gap-4 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_6px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 hover:-translate-y-0.5"
+                        style={{ animationDelay: `${Math.min(animationIndex * 45, 280)}ms` }}
                       >
-                        {item.title}
-                      </div>
-                      {item.description ? (
-                        <div
-                          className="mt-1 text-[13px] leading-snug text-gray-500"
-                          style={clamp2()}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedItem(item)}
+                          className="shrink-0 focus:outline-none"
+                          aria-label={`Подробнее: ${item.title}`}
                         >
-                          {item.description}
-                        </div>
-                      ) : null}
-                    </button>
+                          <div className="relative h-[100px] w-[100px] overflow-hidden rounded-xl bg-gray-100 transition-transform duration-200 active:scale-95">
+                            <Image
+                              src={item.photoUrl}
+                              alt={item.title}
+                              fill
+                              className="object-cover"
+                              sizes="100px"
+                            />
+                            {!item.isAvailable && (
+                              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur">
+                                <span className="px-2 text-center text-[10px] font-bold leading-tight text-gray-500">
+                                  НЕТ В НАЛИЧИИ
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </button>
 
-                    <div className="mt-auto flex items-center justify-between pt-3">
-                      <div className="text-[16px] font-bold text-orange-500">
-                        {formatKgs(item.priceKgs)}
-                      </div>
-                      {item.isAvailable &&
-                        (qty > 0 ? (
-                          <QtyStepper
-                            qty={qty}
-                            onDec={() => dec(item.id)}
-                            onInc={() => inc(item.id)}
-                          />
-                        ) : (
+                        <div className="flex min-w-0 flex-1 flex-col">
                           <button
                             type="button"
-                            onClick={() => addToCart(item)}
-                            className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-xl font-bold text-white shadow-[0_4px_12px_-4px_rgba(249,115,22,0.5)] active:scale-90"
-                            aria-label={`Добавить ${item.title}`}
+                            onClick={() => setSelectedItem(item)}
+                            className="min-w-0 text-left focus:outline-none"
                           >
-                            +
+                            <div
+                              className="text-[15px] font-bold leading-snug text-gray-900"
+                              style={{ ...clamp2(), WebkitLineClamp: 1 }}
+                            >
+                              {item.title}
+                            </div>
+                            {item.description ? (
+                              <div
+                                className="mt-1 text-[13px] leading-snug text-gray-500"
+                                style={clamp2()}
+                              >
+                                {item.description}
+                              </div>
+                            ) : null}
                           </button>
-                        ))}
-                    </div>
-                  </div>
+
+                          <div className="mt-auto flex items-center justify-between pt-3">
+                            <div className="text-[16px] font-bold text-orange-500">
+                              {formatKgs(item.priceKgs)}
+                            </div>
+                            {item.isAvailable &&
+                              (qty > 0 ? (
+                                <QtyStepper
+                                  qty={qty}
+                                  onDec={() => dec(item.id)}
+                                  onInc={() => inc(item.id)}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => addToCart(item)}
+                                  className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-xl font-bold text-white shadow-[0_4px_12px_-4px_rgba(249,115,22,0.5)] active:scale-90"
+                                  aria-label={`Добавить ${item.title}`}
+                                >
+                                  +
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })
+              </section>
+            ))
           )}
         </div>
-
-        {/* Cart FAB */}
-        {cartCount > 0 && (
-          <div className="cart-fab-enter fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-0 right-0 z-30 px-4">
-            <div className="mx-auto max-w-md">
-              <Link
-                href="/cart"
-                className="flex h-14 items-center justify-between rounded-2xl bg-orange-500 px-4 shadow-[0_8px_32px_-8px_rgba(249,115,22,0.5)] hover:bg-orange-600 active:scale-[0.98]"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-[13px] font-bold text-white">
-                  {cartCount}
-                </span>
-                <span className="font-bold text-white">Корзина</span>
-                <span className="text-[13px] font-bold text-white/90">{formatKgs(cartTotal)}</span>
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
 
       <ClientNav menuHref={`/r/${effectiveSlug}`} />
