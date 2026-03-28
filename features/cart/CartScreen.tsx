@@ -13,10 +13,12 @@ import {
   getOrderHistory,
   getSavedAddresses,
   getSavedLocation,
+  getSavedPayerName,
   getSavedPhone,
   setActiveOrderId,
   setPendingPayOrderId,
   setSavedLocation,
+  setSavedPayerName,
   setSavedPhone,
 } from "@/lib/clientPrefs";
 import { formatKgs } from "@/lib/money";
@@ -87,6 +89,7 @@ export default function CartScreen() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [comment, setComment] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bank");
+  const [payerName, setPayerName] = useState("");
   const [loading, setLoading] = useState(false);
   const [redirectingTo, setRedirectingTo] = useState<"pay" | "order" | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -108,6 +111,7 @@ export default function CartScreen() {
     );
     setLine(savedLocation.line);
     setContainer(savedLocation.container);
+    setPayerName(getSavedPayerName());
     setSavedAddresses(getSavedAddresses());
   }, []);
 
@@ -121,9 +125,10 @@ export default function CartScreen() {
         container: container.trim(),
         customerPhone: normalizeKgPhone(customerPhone.trim()) ?? "",
         paymentMethod,
+        payerName: payerName.trim(),
         comment: comment.trim(),
       }),
-    [restaurantSlug, lines, market, line, container, customerPhone, paymentMethod, comment],
+    [restaurantSlug, lines, market, line, container, customerPhone, paymentMethod, payerName, comment],
   );
 
   useEffect(() => {
@@ -140,9 +145,20 @@ export default function CartScreen() {
         line.trim().length > 0 &&
         container.trim().length > 0 &&
         normalizeKgPhone(customerPhone) &&
+        (paymentMethod !== "bank" || payerName.trim().length >= 2) &&
         !loading,
       ),
-    [container, customerPhone, isHydrated, line, lines.length, loading, restaurantSlug],
+    [
+      container,
+      customerPhone,
+      isHydrated,
+      line,
+      lines.length,
+      loading,
+      payerName,
+      paymentMethod,
+      restaurantSlug,
+    ],
   );
 
   const lastOrderSuggestion = useMemo(() => {
@@ -182,12 +198,17 @@ export default function CartScreen() {
     }
 
     const phone = normalizeKgPhone(customerPhone.trim());
+    const normalizedPayerName = payerName.trim();
     if (!line.trim() || !container.trim()) {
       toast.error("Заполните проход и контейнер");
       return;
     }
     if (!phone) {
       toast.error("Укажите телефон в формате 996 (xxx) xxx - xxx");
+      return;
+    }
+    if (paymentMethod === "bank" && normalizedPayerName.length < 2) {
+      toast.error("Укажите имя плательщика");
       return;
     }
     if (submitLockRef.current || loading) return;
@@ -199,6 +220,7 @@ export default function CartScreen() {
         restaurantSlug,
         paymentMethod,
         customerPhone: phone,
+        payerName: paymentMethod === "bank" ? normalizedPayerName : "",
         comment: comment.trim(),
         location: { market, line: line.trim(), container: container.trim() },
         items: lines.map((item) => ({ menuItemId: item.menuItemId, qty: item.qty })),
@@ -231,6 +253,7 @@ export default function CartScreen() {
       });
       setActiveOrderId(payloadJson.orderId);
       setSavedPhone(phone);
+      if (paymentMethod === "bank") setSavedPayerName(normalizedPayerName);
       setSavedLocation({ market, line: line.trim(), container: container.trim() });
       addSavedAddress({ market, line: line.trim(), container: container.trim() });
       clear();
@@ -352,24 +375,22 @@ export default function CartScreen() {
     <main className="min-h-screen px-4 pb-[calc(88px+env(safe-area-inset-bottom))] pt-5">
       <div className="mx-auto max-w-md space-y-4">
         {/* 1. Header card */}
-        <div className="bg-white rounded-2xl shadow-card px-5 py-5">
+        <div className="relative bg-white rounded-2xl shadow-card px-5 py-5">
+          <Link
+            href={menuHref}
+            className="absolute right-5 top-5 whitespace-nowrap rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-500 transition hover:text-gray-900"
+          >
+            В меню
+          </Link>
           <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-orange-500">
             Оформление
           </div>
-          <div className="mt-1 flex items-end justify-between gap-2">
+          <div className="mt-1">
             <div>
-              <h1 className="text-3xl font-extrabold leading-none text-gray-900">Корзина</h1>
-              <p className="mt-2 text-sm text-gray-500">
+              <h1 className="pr-24 text-3xl font-extrabold leading-none text-gray-900">Корзина</h1>
+              <p className="mt-2 pr-24 text-sm text-gray-500">
                 Проверьте состав заказа и адрес доставки.
               </p>
-            </div>
-            <div className="pb-1">
-              <Link
-                href={menuHref}
-                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-500 transition hover:text-gray-900"
-              >
-                В меню
-              </Link>
             </div>
           </div>
         </div>
@@ -578,15 +599,32 @@ export default function CartScreen() {
                   <div
                     className={`text-[15px] font-bold ${active ? "text-orange-600" : "text-gray-900"}`}
                   >
-                    {method === "bank" ? "Банком" : "Наличными"}
+                    {method === "bank" ? "Mbank" : "Наличными"}
                   </div>
                   <div className="mt-0.5 text-[11px] text-gray-500">
-                    {method === "bank" ? "MBank, O!Bank, Bakai" : "Курьеру при доставке"}
+                    {method === "bank" ? "Только Mbank" : "Курьеру при доставке"}
                   </div>
                 </button>
               );
             })}
           </div>
+          {paymentMethod === "bank" && (
+            <div className="border-t border-gray-100 px-5 pb-4 pt-3">
+              <label className="mb-1 block text-[11px] font-semibold text-gray-500">
+                Имя плательщика
+              </label>
+              <input
+                className={inputClass}
+                placeholder="Как вас зовут?"
+                value={payerName}
+                onChange={(event) => setPayerName(event.target.value)}
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Укажите имя, которое видно в переводе Mbank.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 6. Total + CTA */}
