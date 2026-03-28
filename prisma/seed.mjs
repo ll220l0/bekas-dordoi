@@ -7,6 +7,9 @@ const DEFAULT_ADMIN_FIRST_NAME = "Admin";
 const DEFAULT_ADMIN_LAST_NAME = "Owner";
 const DEFAULT_ADMIN_PHONE = "996555000000";
 const DEFAULT_RESTAURANT_NAME = "Beka's Burger";
+const LEGACY_DEFAULT_RESTAURANT_SLUG = "dordoi-food";
+const DEFAULT_RESTAURANT_SLUG =
+  process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_SLUG?.trim() || LEGACY_DEFAULT_RESTAURANT_SLUG;
 const DEFAULT_ITEM_PHOTO_URL = "/brand/bekas-burger-logo.jpg";
 const INITIAL_MENU = [
   {
@@ -89,6 +92,16 @@ function hashPassword(password) {
   return `scrypt$${salt.toString("base64")}$${derived.toString("base64")}`;
 }
 
+async function canReplaceLegacySlug(restaurantId, currentSlug) {
+  if (currentSlug !== LEGACY_DEFAULT_RESTAURANT_SLUG) return false;
+  if (DEFAULT_RESTAURANT_SLUG === LEGACY_DEFAULT_RESTAURANT_SLUG) return false;
+  const existing = await prisma.restaurant.findUnique({
+    where: { slug: DEFAULT_RESTAURANT_SLUG },
+    select: { id: true },
+  });
+  return !existing || existing.id === restaurantId;
+}
+
 async function ensureDefaultAdmin() {
   const activeAdmin = await prisma.adminUser.findFirst({
     where: { isActive: true },
@@ -147,10 +160,18 @@ async function ensureBaseRestaurant() {
   });
 
   if (activeRestaurant) {
-    if (activeRestaurant.name === "Dordoi Food") {
+    const shouldUpdateLegacySlug = await canReplaceLegacySlug(
+      activeRestaurant.id,
+      activeRestaurant.slug,
+    );
+
+    if (activeRestaurant.name === "Dordoi Food" || shouldUpdateLegacySlug) {
       const updated = await prisma.restaurant.update({
         where: { id: activeRestaurant.id },
-        data: { name: DEFAULT_RESTAURANT_NAME },
+        data: {
+          name: activeRestaurant.name === "Dordoi Food" ? DEFAULT_RESTAURANT_NAME : activeRestaurant.name,
+          ...(shouldUpdateLegacySlug ? { slug: DEFAULT_RESTAURANT_SLUG } : {}),
+        },
       });
       console.log(`Updated restaurant brand: ${updated.slug}`);
       return updated;
@@ -161,7 +182,7 @@ async function ensureBaseRestaurant() {
 
   const restaurant = await prisma.restaurant.create({
     data: {
-      slug: "dordoi-food",
+      slug: DEFAULT_RESTAURANT_SLUG,
       name: DEFAULT_RESTAURANT_NAME,
       qrImageUrl: "/qr/demo-restaurant.png",
       isActive: true,
