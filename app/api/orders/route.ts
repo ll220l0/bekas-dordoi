@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { OrderStatus, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { toApiError } from "@/lib/apiError";
 import { buildMbankPayUrl } from "@/lib/mbankLink";
@@ -44,11 +44,17 @@ async function findRecentDuplicateOrder(params: {
   restaurantId: string;
   dbPaymentMethod: "qr_image" | "cash";
   customerPhone: string;
+  payerName: string;
   totalKgs: number;
   location: unknown;
   items: Array<{ menuItemId: string; qty: number }>;
   comment: string;
 }) {
+  const duplicateStatuses: OrderStatus[] =
+    params.dbPaymentMethod === "qr_image"
+      ? ["created", "pending_confirmation"]
+      : ["created", "pending_confirmation", "confirmed"];
+
   const from = new Date(Date.now() - readDuplicateWindowSeconds() * 1_000);
   const recentOrders = await prisma.order.findMany({
     where: {
@@ -56,7 +62,7 @@ async function findRecentDuplicateOrder(params: {
       paymentMethod: params.dbPaymentMethod,
       customerPhone: params.customerPhone,
       createdAt: { gte: from },
-      status: { in: ["created", "pending_confirmation", "confirmed", "cooking", "delivering"] },
+      status: { in: duplicateStatuses },
     },
     include: {
       restaurant: true,
@@ -74,11 +80,13 @@ async function findRecentDuplicateOrder(params: {
   const expectedItemsSignature = makeItemsSignature(params.items);
   const expectedLocation = normalizeLocation(params.location);
   const expectedComment = params.comment.trim();
+  const expectedPayerName = params.payerName.trim().toLowerCase();
 
   return (
     recentOrders.find((order) => {
       if (order.totalKgs !== params.totalKgs) return false;
       if ((order.comment ?? "").trim() !== expectedComment) return false;
+      if ((order.payerName ?? "").trim().toLowerCase() !== expectedPayerName) return false;
 
       const orderLocation = normalizeLocation(order.location);
       if (
@@ -178,6 +186,7 @@ export async function POST(req: Request) {
       restaurantId: restaurant.id,
       dbPaymentMethod,
       customerPhone,
+      payerName: normalizedPayerName,
       totalKgs,
       location,
       items: items.map((item) => ({ menuItemId: item.menuItemId, qty: item.qty })),
