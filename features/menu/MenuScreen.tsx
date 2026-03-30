@@ -25,6 +25,12 @@ type MenuResp = {
     isAvailable: boolean;
     sortOrder?: number;
   }[];
+  businessHours?: {
+    isOpen: boolean;
+    openTime: string;
+    closeTime: string;
+    timezone: string;
+  };
 };
 
 type MenuItem = MenuResp["items"][number];
@@ -334,8 +340,6 @@ function ItemModal({
 }
 
 export default function MenuScreen({ slug }: { slug: string }) {
-  const SHOW_OPENING_SOON = true;
-
   const { data, isLoading, isError } = useQuery({
     queryKey: ["menu", slug],
     queryFn: () => fetchMenu(slug),
@@ -359,6 +363,7 @@ export default function MenuScreen({ slug }: { slug: string }) {
   const lines = useCart((state) => state.lines);
 
   const effectiveSlug = data?.restaurant?.slug ?? slug;
+  const isBusinessClosed = data ? data.businessHours?.isOpen === false : false;
 
   useEffect(() => {
     setRestaurant(effectiveSlug);
@@ -767,7 +772,7 @@ export default function MenuScreen({ slug }: { slug: string }) {
         />
       )}
 
-      {SHOW_OPENING_SOON && (
+      {isBusinessClosed && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/45 backdrop-blur-md">
           <div className="rounded-2xl border border-white/60 bg-white/85 px-7 py-5 text-center shadow-[0_18px_40px_rgba(15,23,42,0.2)]">
             <div className="text-2xl font-extrabold text-gray-900">Скоро откроемся</div>
